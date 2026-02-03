@@ -1,6 +1,15 @@
 # Base file
 import pygame as pg
 
+class Paddle:
+    paddleSurface: pg.Surface
+    paddleImages: list[pg.Surface]
+
+    def __init__(self, assetList: list[str]):
+        paddleImages = list[pg.Surface]
+    def animate_paddle():
+        pass
+
 def main():
     pg.init()
     screen = pg.display.set_mode((800, 600))
