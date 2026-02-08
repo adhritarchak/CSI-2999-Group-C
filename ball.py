@@ -1,9 +1,6 @@
 import pygame as pg
 class Ball:
-    def __init__(self, x, y, color, speed_x, speed_y, radius):
-        self.x = x
-        self.y = y
-        self.color = color
+    def __init__(self, speed_x, speed_y, radius):
         self.speed_x = speed_x
         self.speed_y = speed_y
         self.radius = radius
@@ -13,11 +10,34 @@ class Ball:
     
     def initial_position(self):
         return (self.x, self.y)
-    
-    def draw(self, screen):
-        pg.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius)
 
+def ball_start_movement(ball, paddle1, paddle2):
+    ball.initial_position(300,400) #Example for now, its gonna be infront of player1s position
 
-ball_characteristics = Ball(30,30, (255,255,255), 10, 10, 8)  # Example initialization
-ball_characteristics.draw(pg.display.set_mode((800, 600)))  # Example drawing on a Pygame screen
-ball_initial_position = (400, 300)  # Reset ball position to center
+    if ball.collidirect(paddle1):
+        ball.speed_x *= 1.5
+        ball.speed_y *= 1
+    elif ball.collidirect(paddle2):
+        ball.speed_x *= 1.5
+        ball.speed_y *= 1
+
+    else:
+        pass
+
+def ball_smash_hit(ball, paddle1, paddle2):
+    ball.speed_x *= 2
+    ball.speed_y *= 2
+    paddle1.speed_x *= 2
+    paddle1.speed_y *= 2
+    paddle2.speed_x *= 2
+    paddle2.speed_y *= 2
+
+def ball_reset(ball):
+    pass
+    ## if game_over == True:
+    ##     if player1_score > player2_score:
+    ##         print("Player 1 wins!")
+                #ball.initial_position (whatever paddle2 position is)
+    ##     elif player2_score > player1_score:
+    ##         print("Player 2 wins!")
+                #ball.initial_position (whatever paddle1 position is)
