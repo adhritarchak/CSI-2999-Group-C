@@ -1,3 +1,5 @@
+import pygame as pg
+
 # Base class for managing the game
 class PongGame:
     pass
@@ -7,7 +9,7 @@ class PongPlayer:
     pass
 
 # Class to manage the pong board
-class PongSpace:
+class PongTable:
     pass
 
 # Class to work the paddles
