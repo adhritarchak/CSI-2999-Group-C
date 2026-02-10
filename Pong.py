@@ -7,7 +7,7 @@ class PongGame:
     roundsAmount: int           # total # of rounds, best of X
     winThreshold: int           # how many rounds needed to win
     p1Rounds: int               # how many rounds player 1 has won
-    p2Rounds: int               # how mant rounds player 2 has won
+    p2Rounds: int               # how many rounds player 2 has won
     lastRoundWinner: int        # who the winner of the last round is, 1 for player 1, 2 for player 2, 0 for none (the first round)
 
     postRoundFunction: callable # the method to call when a round is won (for things like card selection)
@@ -50,33 +50,42 @@ class PongGame:
         return self.p1Rounds + self.p2Rounds + 1
 
 class Card:
+    '''The class containing card data. TODO: figure out how we're gonna implement card effects and how we're
+    storing that in the card data.'''
     name: str
-    type: CardTypes
+    type: CardTypes     # Specifies card type. I dunno if we need it yet, but it's probably not bad to have.
 
-    def __init__(self, name = "", cardType = CardTypes.Typeless):
+    def __init__(self, name = "Card", cardType = CardTypes.Typeless):
         self.name = name
         self.type = cardType
 
 class Deck:
+    '''Stack for cards, has both a draw and discard pile for the cards.'''
     name: str
-    drawPile: list[Card]
-    discardPile: list[Card]
-    deckSize: int
+    drawPile: list[Card]        # Undrawn cards go here, and it's refilled on shuffle
+    discardPile: list[Card]     # Where cards that have been drawn go
+    deckSize: int               # Stores the total size of both decks
 
-    def __init__(self, name = ""):
+    def __init__(self, name = "Deck"):
         self.name = name
         self.drawPile = []
         self.discardPile = []
         self.deckSize = 0
     
     def add(self, card: Card):
+        '''Can add cards one by one or all at once in a list. Note that cards are placed on top of the deck.'''
         self.drawPile.append(card)
         self.deckSize += 1
     def add(self, cards: list[Card]):
-        self.drawPile.extend(cards)
+        '''Adds a list of cards. Note that cards are placed in order of the list on the top of the deck.'''
+        for c in cards:
+            self.drawPile.append(c)
         self.deckSize += len(cards)
     
     def draw(self, shuffleIfEmpty = True) -> Card:
+        '''Removes a card from the draw pile, puts it in the discard pile, and returns the drawn card. The
+        shuffleIfEmpty argument specifies if the deck should be shuffled if the draw pile is empty. If false,
+        the function returns None if the draw pile is empty.'''
         if len(self.drawPile) == 0:
             if shuffleIfEmpty: self.shuffle()
             else: return None
@@ -85,9 +94,14 @@ class Deck:
         return card
 
     def shuffle(self):
+        '''Shuffles the deck after putting all cards from the discard pile into the draw pile. To shuffle without
+        reloading the draw pile, use shuffleDrawPile().'''
         for c in self.discardPile:
             self.drawPile.append(c)
             self.discardPile.remove(c)
+        random.shuffle(self.drawPile)
+    def shuffleDrawPile(self):
+        '''Shuffles the remaining cards in the draw pile without reloading it.'''
         random.shuffle(self.drawPile)
 
 # Class to handle the players in the game
@@ -114,4 +128,16 @@ def loadCardFile(pathname: str) -> Card:
             card = json.load(file)
     except FileNotFoundError:
         print("Error: could not find file at {}".format(pathname))
+    except json.JSONDecodeError:
+        print("Error: problem decoding json file at {}".format(pathname))
     return card
+def loadDeck(pathname: str) -> Deck:
+    deck: Deck = None
+    try:
+        with open(pathname, 'r') as file:
+            deck = json.load(file)
+    except FileNotFoundError:
+        print("Error: could not find file at {}".format(pathname))
+    except json.JSONDecodeError:
+        print("Error: problem decoding json file at {}".format(pathname))
+    return deck
