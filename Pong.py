@@ -1,4 +1,6 @@
 import pygame as pg
+import random, json
+from Enums import *
 
 # Base class for managing the game
 class PongGame:
@@ -47,6 +49,47 @@ class PongGame:
     def getRoundNumber(self):
         return self.p1Rounds + self.p2Rounds + 1
 
+class Card:
+    name: str
+    type: CardTypes
+
+    def __init__(self, name = "", cardType = CardTypes.Typeless):
+        self.name = name
+        self.type = cardType
+
+class Deck:
+    name: str
+    drawPile: list[Card]
+    discardPile: list[Card]
+    deckSize: int
+
+    def __init__(self, name = ""):
+        self.name = name
+        self.drawPile = []
+        self.discardPile = []
+        self.deckSize = 0
+    
+    def add(self, card: Card):
+        self.drawPile.append(card)
+        self.deckSize += 1
+    def add(self, cards: list[Card]):
+        self.drawPile.extend(cards)
+        self.deckSize += len(cards)
+    
+    def draw(self, shuffleIfEmpty = True) -> Card:
+        if len(self.drawPile) == 0:
+            if shuffleIfEmpty: self.shuffle()
+            else: return None
+        card = self.drawPile.pop()
+        self.discardPile.append(card)
+        return card
+
+    def shuffle(self):
+        for c in self.discardPile:
+            self.drawPile.append(c)
+            self.discardPile.remove(c)
+        random.shuffle(self.drawPile)
+
 # Class to handle the players in the game
 class PongPlayer:
     pass
@@ -62,3 +105,13 @@ class PongPaddle:
 # Class for the ball
 class PongBall:
     pass
+
+# --- Functions ---
+def loadCardFile(pathname: str) -> Card:
+    card: Card = None
+    try:
+        with open(pathname, 'r') as file:
+            card = json.load(file)
+    except FileNotFoundError:
+        print("Error: could not find file at {}".format(pathname))
+    return card
