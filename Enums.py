@@ -7,3 +7,7 @@ class CardTypes(Enum):
     Effect = 3
     Power = 4
     Misc = 5
+
+X = 0
+Y = 1
+Height = 2

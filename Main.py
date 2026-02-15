@@ -1,5 +1,6 @@
 # Base file
 import pygame as pg
+from Pong import *
 
 class Paddle:
     paddleSurface: pg.Surface
@@ -25,6 +26,9 @@ def main():
     paddle = pg.image.load("assets/Red Paddle.png").convert_alpha()
     paddle_rect = paddle.get_rect(topleft=(100, 100))
     pg.draw.rect(screen, (255, 0, 0), paddle_rect)
+    
+    ball = Ball(x=30, y=300, height=100, color=(255,255,255), speed_x=1.5, speed_y=0.2, radius=8)  # Example initialization
+    ball.draw(screen)  # Example drawing on a Pygame screen
 
     running = True
     while running:
@@ -34,6 +38,7 @@ def main():
 
         screen.fill((0, 0, 0))  # Fill screen with black
         screen.blit(paddle, paddle_rect)
+        ball.draw(screen)
         pg.display.flip()
         clock.tick(60)
 
