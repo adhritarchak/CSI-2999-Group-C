@@ -1,5 +1,4 @@
 import pygame as pg
-import random, json
 from Enums import *
 from Ball import *
 from Cards import *
@@ -22,7 +21,7 @@ class PongGame:
         self.winThreshold = bestOfRounds / 2
         self.p1Rounds = 0
         self.p2Rounds = 0
-        lastRoundWinner = 0
+        self.lastRoundWinner = 0
 
         self.postRoundFunction = postRoundLogic
         self.postMatchFunction = postMatchLogic
@@ -30,23 +29,23 @@ class PongGame:
     def p1WinRound(self):
         '''The function to be called when player 1 wins a round.'''
         self.p1Rounds += 1
-        lastRoundWinner = 1
+        self.lastRoundWinner = 1
 
         # If P1 has won enough rounds to win the match, call the match win function but not the round win function.
         if self.p1Rounds == self.winThreshold:
-            self.postMatchFunction
+            self.postMatchFunction()
             return
-        self.postRoundFunction
+        self.postRoundFunction()
     def p2WinRound(self):
         '''The function to be called when player 2 wins a round.'''
         self.p2Rounds += 1
-        lastRoundWinner = 2
+        self.lastRoundWinner = 2
 
         # If P2 has won enough rounds to win the match, call the match win function but not the round win function.
         if self.p2Rounds == self.winThreshold:
-            self.postMatchFunction
+            self.postMatchFunction()
             return
-        self.postRoundFunction
+        self.postRoundFunction()
 
     def getRoundNumber(self):
         return self.p1Rounds + self.p2Rounds + 1

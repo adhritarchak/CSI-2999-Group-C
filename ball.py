@@ -25,6 +25,33 @@ class Ball:
         self.gravity = gravity
     def set_bounciness(self, bounciness):
         self.bounciness = bounciness
+
+    def impulse(self, impulse: tuple[float, float, float]):
+        '''Apply an impulse to the ball, changing its velocity.'''
+        self.__velocity = (
+            self.__velocity[X] + impulse[X],
+            self.__velocity[Y] + impulse[Y],
+            self.__velocity[Height] + impulse[Height]
+        )
+    def bounce(self, normal: tuple[float, float]):
+        '''Bounce the ball off a surface with the given normal vector.'''
+        # Calculate the dot product of the velocity and the normal
+        dot_product = self.__velocity[X] * normal[X] + self.__velocity[Y] * normal[Y]
+        # Reflect the velocity across the normal
+        self.__velocity = (
+            self.__velocity[X] - 2 * dot_product * normal[X],
+            self.__velocity[Y] - 2 * dot_product * normal[Y],
+            self.__velocity[Height]
+        )
+    def ground_bounce(self, bounciness = -1):
+        '''Bounce the ball off the ground, applying the bounciness factor.'''
+        if bounciness == -1:
+            bounciness = self.bounciness
+        self.__velocity = (
+            self.__velocity[X],
+            self.__velocity[Y] * bounciness,
+            -self.__velocity[Height] * bounciness
+        )
     
     def draw(self, screen):
         self.update_position()  # Update the ball's position before drawing
@@ -37,20 +64,16 @@ class Ball:
             self.__position[Height] + self.__velocity[Height]
         )
 
-        self.__velocity = (
-            self.__velocity[X],
-            self.__velocity[Y],
-            self.__velocity[Height] - self.gravity  # Apply gravity to vertical velocity
-        )
+        self.impulse((0, 0, -self.gravity))  # Apply gravity as a constant downward impulse
 
         if self.__position[Height] < 0:  # If the ball hits the ground
             self.__position = (self.__position[X], self.__position[Y], 0)  # Reset height to ground level
-            self.__velocity = (self.__velocity[X], self.__velocity[Y], -self.__velocity[Height] * self.bounciness)  # Bounce with damping from bounciness
+            self.ground_bounce()  # Bounce off the ground
         if self.__position[X] < 0 or self.__position[X] > 800:  # If the ball goes off the left or right edge of the screen
-            self.__velocity = (-self.__velocity[X], self.__velocity[Y], self.__velocity[Height])  # Reverse horizontal velocity
+            self.bounce((-1, 0))  # Bounce horizontally
         if self.__position[Y] < 0 or self.__position[Y] > 600:  # If the ball goes off the top or bottom edge of the screen
-            self.__velocity = (self.__velocity[X], -self.__velocity[Y], self.__velocity[Height])  # Reverse vertical velocity
+            self.bounce((0, -1))  # Bounce vertically
 
-ball_characteristics = Ball(x=30, y=30, height=100, color=(255,255,255), speed_x=1, speed_y=0.1, radius=8)  # Example initialization
+ball_characteristics = Ball(x=30, y=300, height=100, color=(255,255,255), speed_x=1.5, speed_y=0.2, radius=8)  # Example initialization
 ball_characteristics.draw(pg.display.set_mode((800, 600)))  # Example drawing on a Pygame screen
 ball_initial_position = (400, 300)  # Reset ball position to center
