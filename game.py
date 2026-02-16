@@ -4,67 +4,132 @@ import sys
 pygame.init()
 
 # random constants
-Width = 800
+
+# Window Constants
+Width = 1000
 Height = 600
 FPS = 60
-Paddle_Speed = 5
-Ball_Radius = 10
-Gravity = 0.35
-BounceSpeedLost = 0.85
-Max_Speed = 8
-Paddle_Boost = 1.4
-
-# colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GREEN = (34, 139, 34)
-DARK_GREEN = (0, 100, 0)
-ORANGE = (255, 165, 0)
-SHADOW = (0, 50, 0, 100)
-
-screen = pygame.display.set_mode((800, 600))
+screen = pygame.display.set_mode((Width, Height))
 pygame.display.set_caption("Supreme Pong")
 clock = pygame.time.Clock()
 
-# table surface
-table_surface = pygame.Surface((800, 600))
-table_surface.fill(DARK_GREEN)
+# Table Layout/Dimensions
+Table_Margin = 80
+Table_Border = 5
+Net_Thickness = 4
+Midline_Thickness = 3
 
-# table border
-pygame.draw.rect(table_surface, WHITE, (50, 50, 700, 500), 5)
+Table_Rect = pygame.Rect(Table_Margin, Table_Margin,
+                         Width - Table_Margin * 2,
+                         Height - Table_Margin * 2,)
 
-pygame.draw.line(table_surface, WHITE, (400, 50), (400, 550), 3)
+Left_Boundary = Table_Rect.left
+Right_Boundary = Table_Rect.right
+Top_Boundary = Table_Rect.top
+Bot_Boundary = Table_Rect.bottom
+Center_x = Table_Rect.centerx
+Center_y = Table_Rect.centery
 
+# Paddle Constants
+Paddle_Speed = 5
+Paddle_Boost = 1.4
+Paddle_Width = 20
+Paddle_Height = 80
 
-#sample paddles
-paddle1_surface = pygame.Surface((20,80))
-paddle1_surface.fill((255, 100, 100))
-pygame.draw.rect(paddle1_surface, WHITE, (0, 0, 20, 80), 2)
+# Ball Constants
+Ball_Radius = 10
+Ball_Max_Height = 25
 
-paddle2_surface = pygame.Surface((20,80))
-paddle2_surface.fill((100, 100, 255))
-pygame.draw.rect(paddle1_surface, WHITE, (0, 0, 20, 80), 2)
+# Ball Physics Constants
+ball_init_vel_x = 3
+ball_init_vel_y = 1.5
+ball_init_vel_z = 8
+Gravity = 0.35
+BounceSpeedLost = 0.85
+Max_Speed = 8
+Bounce_MinZ = 8
+paddle_hit_boost = 1
 
-paddle1_x = 100
-paddle1_y = Height // 2 - 40
-
-paddle2_x = Width - 120
-paddle2_y = Height // 2 - 40
-
-Left_Boundary = 50
-Right_Boundary = Width - 50
-Top_Boundary = 50
-Bot_Boundary = Height - 50
-Center_x = Width // 2
-
-# ball physics
 ball_x = Width // 2
 ball_y = Height // 2
 ball_vel_x = 1
 ball_vel_y = 0.8
 ball_height = 0
 ball_vel_z = 0
-ball_max_height = 25
+
+
+
+# colors constants
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED_TABLE = (170, 40, 40)
+LIGHT_BROWN = (200, 170, 130)
+ORANGE = (255, 165, 0)
+SHADOW = (0, 50, 0, 100)
+PADDLE1_COLOR = (255, 100, 100)
+PADDLE2_COLOR = (100, 100, 255)
+
+
+#sample paddles
+paddle1_surface = pygame.Surface((Paddle_Width, Paddle_Height))
+paddle1_surface.fill((PADDLE1_COLOR))
+pygame.draw.rect(paddle1_surface, WHITE, (0, 0, Paddle_Width, Paddle_Height), 2)
+
+paddle2_surface = pygame.Surface((Paddle_Width, Paddle_Height))
+paddle2_surface.fill((PADDLE2_COLOR))
+pygame.draw.rect(paddle2_surface, WHITE, (0, 0, Paddle_Width, Paddle_Height), 2)
+
+paddle1_x = Left_Boundary + 50
+paddle1_y = Center_y - Paddle_Height // 2
+
+paddle2_x = Right_Boundary - 50 - Paddle_Width
+paddle2_y = Center_y - Paddle_Height // 2
+
+def draw_table():
+    # Background
+    screen.fill(LIGHT_BROWN)
+    shadow = Table_Rect.move(6, 6)
+    pygame.draw.rect(screen, BLACK, shadow, border_radius=6)
+    pygame.draw.rect(screen, RED_TABLE, Table_Rect)
+
+    # Table border
+    pygame.draw.rect(screen, WHITE, Table_Rect, Table_Border)
+
+    # PingPong Net
+    pygame.draw.line(
+        screen, WHITE,
+        (Table_Rect.centerx, Table_Rect.top),
+        (Table_Rect.centerx, Table_Rect.bottom),
+        Net_Thickness
+    )
+
+    # Center horizontal line
+    pygame.draw.line(
+        screen, WHITE,
+        (Table_Rect.left, Table_Rect.centery),
+        (Table_Rect.right, Table_Rect.centery),
+        Midline_Thickness
+    )
+
+def draw_ball(bx, by, bheight):
+    # shadow 
+    shadow_offset = bheight * 0.3
+    shadow_radius = max(3, int(Ball_Radius * (1 - bheight / 150)))
+    shadow_transparency = max(30, int(150 * (1 - bheight / 150)))
+
+    shadow_surface = pygame.Surface((shadow_radius * 2, shadow_radius * 2), pygame.SRCALPHA)
+    pygame.draw.circle(shadow_surface, (0, 50, 0, shadow_transparency),
+                       (shadow_radius, shadow_radius), shadow_radius)
+    screen.blit(shadow_surface, 
+                (int(bx - shadow_radius + shadow_offset), 
+                 int(by - shadow_radius + shadow_offset))) 
+
+
+    # actual ball
+    ball_screen_y = by - bheight
+    pygame.draw.circle(screen, ORANGE, (int(bx), int(ball_screen_y)), Ball_Radius)
+    pygame.draw.circle(screen, WHITE, (int(bx), int(ball_screen_y)), Ball_Radius, 2)
+
 
 # actual game
 running = True
@@ -109,8 +174,8 @@ while running:
         ball_vel_y *= 0.9
 
         # keeping ball velocity
-        if ball_vel_z < 8:
-            ball_vel_z = 8
+        if ball_vel_z < Bounce_MinZ:
+            ball_vel_z = Bounce_MinZ
 
     ball_x += ball_vel_x
     ball_y += ball_vel_y
@@ -126,48 +191,27 @@ while running:
 
     # ball collision with paddles
     if ball_height < 15:
-        if (paddle1_x < ball_x < paddle1_x + 20 and paddle1_y
-            < ball_y < paddle1_y + 80):
-            ball_vel_x = abs(ball_vel_x) +1
-            # speed cap
-            ball_vel_x = min(ball_vel_x, Max_Speed)
-            ball_vel_y = min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1)
-            ball_vel_z = 8 # bounce this
+        p1_hit = (paddle1_x < ball_x < paddle1_x + Paddle_Width and 
+                  paddle1_y < ball_y < paddle1_y + Paddle_Height)
+        p2_hit = (paddle2_x < ball_x < paddle2_x + Paddle_Width and 
+                  paddle2_y < ball_y < paddle2_y + Paddle_Height)
 
-        if (paddle2_x < ball_x < paddle2_x + 20 and paddle2_y
-            < ball_y < paddle2_y + 80):
-            ball_vel_x = -abs(ball_vel_x) -1
-            # speed cap
-            ball_vel_x = max(ball_vel_x, -Max_Speed)
-            ball_vel_y = min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1)
-            ball_vel_z = 8 # bounce this
+        if p1_hit:
+            ball_vel_x = min(abs(ball_vel_x) + paddle_hit_boost, Max_Speed)
+            ball_vel_y = (min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1))
+            ball_vel_z = Bounce_MinZ
 
-   
+        if p2_hit:
+            ball_vel_x = max(-(abs(ball_vel_x) + paddle_hit_boost), -Max_Speed)
+            ball_vel_y = (min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1))
+            ball_vel_z = Bounce_MinZ
 
-    screen.fill(BLACK)
-
-    screen.blit(table_surface, (0, 0))
+    draw_table()
 
     screen.blit(paddle1_surface, (paddle1_x, paddle1_y))
     screen.blit(paddle2_surface, (paddle2_x, paddle2_y))
 
-    # ball shadow
-    shadow_offset = ball_height * 0.3
-    shadow_radius = max(3, int(Ball_Radius * (1 - ball_height / 150)))
-    shadow_transparency = max(30, int(150 * (1 - ball_height / 150)))
-
-    shadow_surface = pygame.Surface((shadow_radius * 2, shadow_radius * 2), pygame.SRCALPHA)
-    pygame.draw.circle(shadow_surface, (0, 50, 0, shadow_transparency),
-                       (shadow_radius, shadow_radius), shadow_radius)
-    screen.blit(shadow_surface, 
-                (int(ball_x - shadow_radius + shadow_offset), 
-                 int(ball_y - shadow_radius + shadow_offset))) 
-
-
-    # actual ball
-    ball_screen_y = ball_y - ball_height
-    pygame.draw.circle(screen, ORANGE, (int(ball_x), int(ball_screen_y)), Ball_Radius)
-    pygame.draw.circle(screen, WHITE, (int(ball_x), int(ball_screen_y)), Ball_Radius, 2)
+    draw_ball(ball_x, ball_y, ball_height)
 
     pygame.display.flip()
     clock.tick(FPS)
