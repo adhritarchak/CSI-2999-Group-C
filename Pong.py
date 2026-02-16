@@ -1,9 +1,24 @@
 import pygame as pg
-import random, json
 from Enums import *
+from Ball import *
+from Cards import *
+
+# Class to work the paddles
+class PongPaddle:
+    pass
+
+# Class to handle the players in the game
+class PongPlayer:
+    paddle: PongPaddle
+    deck: Deck
 
 # Base class for managing the game
 class PongGame:
+    gameStage: GameStages       # The current stage of the game, used to determine what logic to run and what to draw
+    player1: PongPlayer
+    player2: PongPlayer
+    ball: Ball
+
     roundsAmount: int           # total # of rounds, best of X
     winThreshold: int           # how many rounds needed to win
     p1Rounds: int               # how many rounds player 1 has won
@@ -13,14 +28,18 @@ class PongGame:
     postRoundFunction: callable # the method to call when a round is won (for things like card selection)
     postMatchFunction: callable # the method to call when someone wins (for exiting the match)
 
-    def __init__(self, postRoundLogic: callable = None, postMatchLogic: callable = None, bestOfRounds = 5):
+    screen: pg.Surface          # The Pygame screen to draw on
+
+    def __init__(self, screen: pg.Surface, postRoundLogic: callable = None, postMatchLogic: callable = None, bestOfRounds = 5):
         '''The Object that handles the game state. In the constructor, the functions to call when a round 
         is won or the match is won can be specified, but by default they will not do anything.'''
+        self.gameStage = GameStages.StartScreen
+        self.screen = screen
         self.roundsAmount = bestOfRounds
         self.winThreshold = bestOfRounds / 2
         self.p1Rounds = 0
         self.p2Rounds = 0
-        lastRoundWinner = 0
+        self.lastRoundWinner = 0
 
         self.postRoundFunction = postRoundLogic
         self.postMatchFunction = postMatchLogic
@@ -28,116 +47,27 @@ class PongGame:
     def p1WinRound(self):
         '''The function to be called when player 1 wins a round.'''
         self.p1Rounds += 1
-        lastRoundWinner = 1
+        self.lastRoundWinner = 1
 
         # If P1 has won enough rounds to win the match, call the match win function but not the round win function.
         if self.p1Rounds == self.winThreshold:
-            self.postMatchFunction
+            self.postMatchFunction()
             return
-        self.postRoundFunction
+        self.postRoundFunction()
     def p2WinRound(self):
         '''The function to be called when player 2 wins a round.'''
         self.p2Rounds += 1
-        lastRoundWinner = 2
+        self.lastRoundWinner = 2
 
         # If P2 has won enough rounds to win the match, call the match win function but not the round win function.
         if self.p2Rounds == self.winThreshold:
-            self.postMatchFunction
+            self.postMatchFunction()
             return
-        self.postRoundFunction
+        self.postRoundFunction()
 
     def getRoundNumber(self):
         return self.p1Rounds + self.p2Rounds + 1
 
-class Card:
-    '''The class containing card data. TODO: figure out how we're gonna implement card effects and how we're
-    storing that in the card data.'''
-    name: str
-    type: CardTypes     # Specifies card type. I dunno if we need it yet, but it's probably not bad to have.
-
-    def __init__(self, name = "Card", cardType = CardTypes.Typeless):
-        self.name = name
-        self.type = cardType
-
-class Deck:
-    '''Stack for cards, has both a draw and discard pile for the cards.'''
-    name: str
-    drawPile: list[Card]        # Undrawn cards go here, and it's refilled on shuffle
-    discardPile: list[Card]     # Where cards that have been drawn go
-    deckSize: int               # Stores the total size of both decks
-
-    def __init__(self, name = "Deck"):
-        self.name = name
-        self.drawPile = []
-        self.discardPile = []
-        self.deckSize = 0
-    
-    def add(self, card: Card):
-        '''Can add cards one by one or all at once in a list. Note that cards are placed on top of the deck.'''
-        self.drawPile.append(card)
-        self.deckSize += 1
-    def add(self, cards: list[Card]):
-        '''Adds a list of cards. Note that cards are placed in order of the list on the top of the deck.'''
-        for c in cards:
-            self.drawPile.append(c)
-        self.deckSize += len(cards)
-    
-    def draw(self, shuffleIfEmpty = True) -> Card:
-        '''Removes a card from the draw pile, puts it in the discard pile, and returns the drawn card. The
-        shuffleIfEmpty argument specifies if the deck should be shuffled if the draw pile is empty. If false,
-        the function returns None if the draw pile is empty.'''
-        if len(self.drawPile) == 0:
-            if shuffleIfEmpty: self.shuffle()
-            else: return None
-        card = self.drawPile.pop()
-        self.discardPile.append(card)
-        return card
-
-    def shuffle(self):
-        '''Shuffles the deck after putting all cards from the discard pile into the draw pile. To shuffle without
-        reloading the draw pile, use shuffleDrawPile().'''
-        for c in self.discardPile:
-            self.drawPile.append(c)
-            self.discardPile.remove(c)
-        random.shuffle(self.drawPile)
-    def shuffleDrawPile(self):
-        '''Shuffles the remaining cards in the draw pile without reloading it.'''
-        random.shuffle(self.drawPile)
-
-# Class to handle the players in the game
-class PongPlayer:
-    pass
-
 # Class to manage the pong board
 class PongTable:
     pass
-
-# Class to work the paddles
-class PongPaddle:
-    pass
-
-# Class for the ball
-class PongBall:
-    pass
-
-# --- Functions ---
-def loadCardFile(pathname: str) -> Card:
-    card: Card = None
-    try:
-        with open(pathname, 'r') as file:
-            card = json.load(file)
-    except FileNotFoundError:
-        print("Error: could not find file at {}".format(pathname))
-    except json.JSONDecodeError:
-        print("Error: problem decoding json file at {}".format(pathname))
-    return card
-def loadDeck(pathname: str) -> Deck:
-    deck: Deck = None
-    try:
-        with open(pathname, 'r') as file:
-            deck = json.load(file)
-    except FileNotFoundError:
-        print("Error: could not find file at {}".format(pathname))
-    except json.JSONDecodeError:
-        print("Error: problem decoding json file at {}".format(pathname))
-    return deck
