@@ -18,14 +18,21 @@ class Ball:
         self.__bounds = (0, 600, 0, 800)  # Default bounds for the ball to move in (top, bottom, left, right)
         self.radius = radius
 
-    def get_velocity(self):
+    def velocity(self):
         return self.__velocity
     
-    def get_height(self):
+    def height(self):
         return self.__position[HEIGHT]
+    def xy_pos(self) -> tuple[float, float]:
+        return (self.__position[X], self.__position[Y])
     
     def set_bounds(self, top, bottom, left, right):
         self.__bounds = (top, bottom, left, right)
+    def within_rect(self, rect: pg.Rect, x_offset: float, y_offset: float) -> bool:
+        if self.__position[X] > rect.left + x_offset and self.__position[X] < rect.right + x_offset \
+                and self.__position[Y] > rect.top + y_offset and self.__position[Y] < rect.bottom + y_offset:
+            return True
+        return False
     def set_gravity(self, gravity):
         self.gravity = gravity
     def set_bounciness(self, bounciness):
@@ -42,14 +49,14 @@ class Ball:
             self.__velocity[Y] + impulse[Y],
             self.__velocity[HEIGHT] + impulse[HEIGHT]
         )
-    def bounce(self, normal: tuple[float, float]):
+    def bounce(self, normal_x: float, normal_y: float):
         '''Bounce the ball off a surface with the given normal vector.'''
         # Calculate the dot product of the velocity and the normal
-        dot_product = self.__velocity[X] * normal[X] + self.__velocity[Y] * normal[Y]
+        dot_product = self.__velocity[X] * normal_x + self.__velocity[Y] * normal_y
         # Reflect the velocity across the normal
         self.__velocity = (
-            self.__velocity[X] - 2 * dot_product * normal[X],
-            self.__velocity[Y] - 2 * dot_product * normal[Y],
+            self.__velocity[X] - 2 * dot_product * normal_x,
+            self.__velocity[Y] - 2 * dot_product * normal_y,
             self.__velocity[HEIGHT]
         )
     

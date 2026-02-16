@@ -113,7 +113,7 @@ def draw_table():
     )
 
 ball = Ball(x=100, y=300, height=50, speed_x=2, speed_y=1.2, radius=8)
-ball.set_bounds(top=100, bottom=Height, left=0, right=Width)
+ball.set_bounds(top=Top_Boundary, bottom=Bot_Boundary, left=Left_Boundary, right=Right_Boundary)
 
 # actual game
 running = True
@@ -144,15 +144,10 @@ while running:
     if keys[pygame.K_RIGHT] and paddle2_x + 20 < Right_Boundary:
         paddle2_x += Paddle_Speed
 
-        # if p1_hit:
-        #     ball_vel_x = min(abs(ball_vel_x) + paddle_hit_boost, Max_Speed)
-        #     ball_vel_y = (min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1))
-        #     ball_vel_z = Bounce_MinZ
-
-        # if p2_hit:
-        #     ball_vel_x = max(-(abs(ball_vel_x) + paddle_hit_boost), -Max_Speed)
-        #     ball_vel_y = (min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1))
-        #     ball_vel_z = Bounce_MinZ
+    if ball.height() < 15 and ball.within_rect(paddle1_surface.get_rect(), paddle1_x, paddle1_y):
+        ball.bounce(1, 0)
+    if ball.height() < 15 and ball.within_rect(paddle2_surface.get_rect(), paddle2_x, paddle2_y):
+        ball.bounce(-1, 0)
 
     draw_table()
 
