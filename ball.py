@@ -10,6 +10,7 @@ class Ball:
     gravity: float = 0.1  # gravity affecting the ball's vertical movement
     bounciness: float = 0.99  # how much the ball bounces back after hitting the ground (0 to 1)
     draw_prediction: bool = False  # whether to draw a prediction of the ball's trajectory
+    ellipse_scale: tuple[float, float] = (1.8, 1.2)  # scale of the ellipse drawn at the predicted landing position (x scale, y scale)
 
     def __init__(self, x, y, height, speed_x, speed_y, radius):
         self.__position = (x, y, height)
@@ -51,66 +52,69 @@ class Ball:
             self.__velocity[Y] - 2 * dot_product * normal[Y],
             self.__velocity[HEIGHT]
         )
-    def ground_bounce(self, bounciness = -1):
-        '''Bounce the ball off the ground, applying the bounciness factor.'''
-        if bounciness == -1:
-            bounciness = self.bounciness
-        self.__velocity = (
-            self.__velocity[X],
-            self.__velocity[Y] * bounciness,
-            -self.__velocity[HEIGHT] * bounciness
-        )
     
     def draw(self, screen):
         self.update_position()  # Update the ball's position before drawing
-        pg.draw.circle(screen, (60, 60, 60), (int(self.__position[X]), int(self.__position[Y] + self.radius)), max(1, self.radius - (self.__position[HEIGHT] // 20)))  # Shadow
-        pg.draw.circle(screen, self.color, (int(self.__position[X]), int(self.__position[Y] - self.__position[HEIGHT])), self.radius)
+        pg.draw.circle(surface=screen, color=(60, 60, 60), center=(int(self.__position[X]), int(self.__position[Y] + self.radius)), radius=max(1, self.radius - (self.__position[HEIGHT] // 20)))  # Shadow
+        pg.draw.circle(surface=screen, color=self.color, center=(int(self.__position[X]), int(self.__position[Y] - self.__position[HEIGHT])), radius=self.radius)
+        self.draw_trajectory(screen, self.draw_prediction)
 
         if(self.draw_prediction):
             # Implement drawing the trajectory prediction here
-            self.draw_trajectory(screen)
             self.draw_ground_trajectory(screen)
 
-    def draw_trajectory(self, screen):
+    def step_physics(self, pos: tuple[float, float, float], vel: tuple[float, float, float]) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+        '''Calculate the next position and velocity of the ball based on its current state and physics.'''
+        nextPos = (
+            pos[X] + vel[X],
+            pos[Y] + vel[Y],
+            pos[HEIGHT] + vel[HEIGHT]
+        )
+        nextVel = (
+            vel[X],
+            vel[Y],
+            vel[HEIGHT] - self.gravity
+        )
+
+        if nextPos[HEIGHT] < 0:  # If the ball hits the ground
+            nextPos = (nextPos[X], nextPos[Y], 0)  # Reset height to ground level
+            nextVel = (
+                nextVel[X],
+                nextVel[Y],
+                -nextVel[HEIGHT] * self.bounciness
+            )  # Bounce off the ground
+        if nextPos[X] < self.__bounds[LEFT] + self.radius or nextPos[X] > self.__bounds[RIGHT] - self.radius:  # If the ball goes off the left or right bounds
+            nextVel = (-nextVel[X], nextVel[Y], nextVel[HEIGHT])  # Bounce horizontally
+        if nextPos[Y] < self.__bounds[TOP] + self.radius or nextPos[Y] > self.__bounds[BOTTOM] - self.radius:  # If the ball goes off the top or bottom bounds
+            nextVel = (nextVel[X], -nextVel[Y], nextVel[HEIGHT])  # Bounce vertically
+        return nextPos, nextVel
+
+    def draw_trajectory(self, screen, draw_lines = False):
         '''Draw a prediction of the ball's trajectory on the screen.'''
         # Create a list to store predicted positions
         predicted_positions: list[tuple] = []
         current_pos = self.__position
         current_vel = self.__velocity
 
-        # Predict positions for a few steps ahead
-        for _ in range(100):  # Predict 100 steps ahead
-            current_pos = (
-                current_pos[X] + current_vel[X],
-                current_pos[Y] + current_vel[Y],
-                current_pos[HEIGHT] + current_vel[HEIGHT]
-            )
+        # Predict positions for the next 2 bounces
+        bounces = 0
+        for _ in range(1000):  # Predict until the ball bounces twice or 1000 steps have been calculated
+            current_pos, current_vel = self.step_physics(current_pos, current_vel)
             predicted_positions.append(current_pos)
-
-            # Apply gravity (simulate downward acceleration)
-            current_vel = (
-                current_vel[X],
-                current_vel[Y],
-                current_vel[HEIGHT] - self.gravity
-            )
-
-            # Check for ground collision
-            if current_pos[HEIGHT] < 0:
-                current_pos = (current_pos[X], current_pos[Y], 0)  # Reset height to ground level
-                current_vel = (
-                    current_vel[X],
-                    current_vel[Y] * self.bounciness,
-                    -current_vel[HEIGHT] * self.bounciness
-                )  # Bounce off the ground
-            if current_pos[X] < self.__bounds[LEFT] + self.radius or current_pos[X] > self.__bounds[RIGHT] - self.radius:  # If the ball goes off the left or right bounds
-                current_vel = (-current_vel[X], current_vel[Y], current_vel[HEIGHT])  # Bounce horizontally
-            if current_pos[Y] < self.__bounds[TOP] + self.radius or current_pos[Y] > self.__bounds[BOTTOM] - self.radius:  # If the ball goes off the top or bottom bounds
-                current_vel = (current_vel[X], -current_vel[Y], current_vel[HEIGHT])  # Bounce vertically
+            if current_pos[HEIGHT] <= 0:  # Stop prediction if ball bounces twice
+                bounces += 1
+                if bounces >= 2:
+                    break
 
         # Draw the trajectory as a series of lines
-        for i in range(len(predicted_positions) - 1):
-            pg.draw.line(screen, (255, 255, 255), (int(predicted_positions[i][X]), int(predicted_positions[i][Y] - predicted_positions[i][HEIGHT])),
+        if draw_lines:
+            for i in range(len(predicted_positions) - 1):
+                pg.draw.line(screen, (255, 255, 255), (int(predicted_positions[i][X]), int(predicted_positions[i][Y] - predicted_positions[i][HEIGHT])),
                           (int(predicted_positions[i+1][X]), int(predicted_positions[i+1][Y] - predicted_positions[i+1][HEIGHT])), 2)
+            
+        pg.draw.ellipse(surface=screen, color=(255, 255, 255), width=2, rect=pg.Rect(predicted_positions[-1][X] - self.ellipse_scale[X] * self.radius, 
+                predicted_positions[-1][Y] - self.ellipse_scale[Y] * self.radius, self.ellipse_scale[X] * 2 * self.radius, 
+                self.ellipse_scale[Y] * 2 * self.radius))  # Draw an ellipse at the final predicted position
     def draw_ground_trajectory(self, screen):
         '''Draw a prediction of where the ball will hit the ground on the screen.'''
         # Create a list to store predicted positions
@@ -118,48 +122,23 @@ class Ball:
         current_pos = self.__position
         current_vel = self.__velocity
 
-        # Predict positions for a few steps ahead
-        for _ in range(100):  # Predict 100 steps ahead
-            current_pos = (
-                current_pos[X] + current_vel[X],
-                current_pos[Y] + current_vel[Y]
-            )
+        # Predict positions for the next 2 bounces
+        bounces = 0
+        for _ in range(1000):  # Predict until the ball hits the ground twice or 1000 steps have been calculated
+            current_pos, current_vel = self.step_physics(current_pos, current_vel)
             predicted_positions.append(current_pos)
-
-            # Apply gravity (simulate downward acceleration)
-            current_vel = (
-                current_vel[X],
-                current_vel[Y]
-            )
-
-            if current_pos[X] < self.__bounds[LEFT] + self.radius or current_pos[X] > self.__bounds[RIGHT] - self.radius:  # If the ball goes off the left or right bounds
-                current_vel = (-current_vel[X], current_vel[Y])  # Bounce horizontally
-            if current_pos[Y] < self.__bounds[TOP] + self.radius or current_pos[Y] > self.__bounds[BOTTOM] - self.radius:  # If the ball goes off the top or bottom bounds
-                current_vel = (current_vel[X], -current_vel[Y])  # Bounce vertically
+            if current_pos[HEIGHT] <= 0:  # Stop prediction if ball bounces twice
+                bounces += 1
+                if bounces >= 2:
+                    break
 
         # Draw the trajectory as a series of lines
         for i in range(len(predicted_positions) - 1):
             pg.draw.line(screen, (100, 100, 100), (int(predicted_positions[i][X]), int(predicted_positions[i][Y])),
                           (int(predicted_positions[i+1][X]), int(predicted_positions[i+1][Y])), 2)
         
-        
-
     def update_position(self):
-        self.__position = (
-            self.__position[X] + self.__velocity[X],
-            self.__position[Y] + self.__velocity[Y],
-            self.__position[HEIGHT] + self.__velocity[HEIGHT]
-        )
-
-        self.impulse((0, 0, -self.gravity))  # Apply gravity as a constant downward impulse
-
-        if self.__position[HEIGHT] < 0:  # If the ball hits the ground
-            self.__position = (self.__position[X], self.__position[Y], 0)  # Reset height to ground level
-            self.ground_bounce()  # Bounce off the ground
-        if self.__position[X] < self.__bounds[LEFT] + self.radius or self.__position[X] > self.__bounds[RIGHT] - self.radius:  # If the ball goes off the left or right bounds
-            self.bounce((-1, 0))  # Bounce horizontally
-        if self.__position[Y] < self.__bounds[TOP] + self.radius or self.__position[Y] > self.__bounds[BOTTOM] - self.radius:  # If the ball goes off the top or bottom bounds
-            self.bounce((0, -1))  # Bounce vertically
+        self.__position, self.__velocity = self.step_physics(self.__position, self.__velocity)
 
 ball_characteristics = Ball(x=30, y=300, height=100, speed_x=1.5, speed_y=0.2, radius=8)  # Example initialization
 ball_characteristics.draw(pg.display.set_mode((800, 600)))  # Example drawing on a Pygame screen
