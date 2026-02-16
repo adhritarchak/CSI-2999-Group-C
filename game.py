@@ -31,13 +31,14 @@ Center_x = Table_Rect.centerx
 Center_y = Table_Rect.centery
 
 # Paddle Constants
-Paddle_Speed = 5
 Paddle_Boost = 1.4
 Paddle_Width = 20
 Paddle_Height = 80
 BasePaddleSpeed = 5
-Paddle1_Speed = BasePaddleSpeed
-Paddle2_Speed = BasePaddleSpeed
+SmashPaddle1Speed = BasePaddleSpeed * 0.3
+SmashPaddle2Speed = BasePaddleSpeed * 0.3
+CurrentPaddle1Speed = SmashPaddle1Speed if Smash1_active else BasePaddleSpeed
+CurrentPaddle2Speed = SmashPaddle2Speed if Smash2_active else BasePaddleSpeed
 Smash_start_time = 0
 Smash1_hold_time = 0
 Smash1_active = False
@@ -147,60 +148,60 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
+    dt = clock.tick(FPS)
     keys = pygame.key.get_pressed()
 
     # paddle 1 movement (WASD)
     if keys[pygame.K_w] and paddle1_y > Top_Boundary:
-        paddle1_y -= Paddle_Speed
+        paddle1_y -= CurrentPaddle1Speed * (dt / 16.67)
     if keys[pygame.K_s] and paddle1_y + 80 < Bot_Boundary:
-        paddle1_y += Paddle_Speed
+        paddle1_y += CurrentPaddle1Speed * (dt / 16.67)
     if keys[pygame.K_a] and paddle1_x > Left_Boundary:
-        paddle1_x -= Paddle_Speed
+        paddle1_x -= CurrentPaddle1Speed * (dt / 16.67)
     if keys[pygame.K_d] and paddle1_x + 20 < Center_x:
-        paddle1_x += Paddle_Speed
+        paddle1_x += CurrentPaddle1Speed * (dt / 16.67)
     if keys[pygame.K_SPACE]: # regular
         if paddle1_x < ball_x < paddle1_x + 20 and paddle1_y < ball_y < paddle1_y + 80:
-            ball_vel_x += 1 
+            ball_vel_x += 3 
     if keys[pygame.K_LSHIFT]: #smash
-        Smash1_hold_time += clock.get_time()
+        Smash1_hold_time += dt
     if Smash1_hold_time >= 3000 and not Smash1_active:
             Smash1_active = True
             Smash1_start_time = pygame.time.get_ticks()
-            Paddle1_Speed = BasePaddleSpeed - 2.5
+            CurrentPaddle1Speed = SmashPaddle1Speed
             Smash1_hit = False
     if Smash1_active == True:
         if paddle1_x < ball_x < paddle1_x + 20 and paddle1_y < ball_y < paddle1_y + 80:
-                ball_vel_x += 10
+                ball_vel_x = Max_Speed
                 Smash1_hit = True
     if Smash1_active and pygame.time.get_ticks() - Smash1_start_time >= Smash_duration:
             Smash1_active = False
             Smash1_hold_time = 0
-            Paddle1_Speed = BasePaddleSpeed 
+            CurrentPaddle1Speed = BasePaddleSpeed 
             Smash1_hit = False
 
     # paddle 2 movement (arrow keys)
     if keys[pygame.K_UP] and paddle2_y > Top_Boundary:
-        paddle2_y -= Paddle_Speed
+        paddle2_y -= CurrentPaddle2Speed * (dt / 16.67)
     if keys[pygame.K_DOWN] and paddle2_y + 80 < Bot_Boundary:
-        paddle2_y += Paddle_Speed
+        paddle2_y += CurrentPaddle2Speed * (dt / 16.67)
     if keys[pygame.K_LEFT] and paddle2_x > Center_x:
-        paddle2_x -= Paddle_Speed
+        paddle2_x -= CurrentPaddle2Speed * (dt / 16.67)
     if keys[pygame.K_RIGHT] and paddle2_x + 20 < Right_Boundary:
-        paddle2_x += Paddle_Speed
+        paddle2_x += CurrentPaddle2Speed * (dt / 16.67)
     if keys[pygame.K_RETURN]: # regular
         if paddle2_x < ball_x < paddle2_x + 20 and paddle2_y < ball_y < paddle2_y + 80:
-            ball_vel_x += 1 
+            ball_vel_x += 3 
     if keys[pygame.K_RSHIFT]: #smash
-        Smash2_hold_time += clock.get_time()
+        Smash2_hold_time += dt
     if Smash2_hold_time >= 3000 and not Smash2_active:
             Smash2_active = True
             Smash2_start_time = pygame.time.get_ticks()
-            Paddle2_Speed = BasePaddleSpeed - 2.5
+            CurrentPaddle2Speed = SmashPaddle2Speed
             Smash2_hit = False
     if Smash2_active == True:
         if paddle2_x < ball_x < paddle2_x + 20 and paddle2_y < ball_y < paddle2_y + 80:
-                ball_vel_x *= 2
+                ball_vel_x = Max_Speed
                 Smash2_hit = True
     if Smash2_active and pygame.time.get_ticks() - Smash2_start_time >= Smash_duration:
             Smash2_active = False
@@ -262,7 +263,6 @@ while running:
     draw_ball(ball_x, ball_y, ball_height)
 
     pygame.display.flip()
-    clock.tick(FPS)
 
 pygame.quit()
 sys.exit()
