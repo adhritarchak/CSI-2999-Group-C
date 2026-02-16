@@ -5,6 +5,8 @@ from Cards import *
 
 # Base class for managing the game
 class PongGame:
+    gameStage: GameStages     # The current stage of the game, used to determine what logic to run and what to draw
+
     roundsAmount: int           # total # of rounds, best of X
     winThreshold: int           # how many rounds needed to win
     p1Rounds: int               # how many rounds player 1 has won
@@ -14,9 +16,13 @@ class PongGame:
     postRoundFunction: callable # the method to call when a round is won (for things like card selection)
     postMatchFunction: callable # the method to call when someone wins (for exiting the match)
 
-    def __init__(self, postRoundLogic: callable = None, postMatchLogic: callable = None, bestOfRounds = 5):
+    screen: pg.Surface          # The Pygame screen to draw on
+
+    def __init__(self, screen: pg.Surface, postRoundLogic: callable = None, postMatchLogic: callable = None, bestOfRounds = 5):
         '''The Object that handles the game state. In the constructor, the functions to call when a round 
         is won or the match is won can be specified, but by default they will not do anything.'''
+        self.gameStage = GameStages.StartScreen
+        self.screen = screen
         self.roundsAmount = bestOfRounds
         self.winThreshold = bestOfRounds / 2
         self.p1Rounds = 0
@@ -60,8 +66,4 @@ class PongTable:
 
 # Class to work the paddles
 class PongPaddle:
-    pass
-
-# Class for the ball
-class PongBall:
     pass
