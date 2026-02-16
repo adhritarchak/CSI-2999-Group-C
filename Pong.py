@@ -3,9 +3,21 @@ from Enums import *
 from Ball import *
 from Cards import *
 
+# Class to work the paddles
+class PongPaddle:
+    pass
+
+# Class to handle the players in the game
+class PongPlayer:
+    paddle: PongPaddle
+    deck: Deck
+
 # Base class for managing the game
 class PongGame:
-    gameStage: GameStages     # The current stage of the game, used to determine what logic to run and what to draw
+    gameStage: GameStages       # The current stage of the game, used to determine what logic to run and what to draw
+    player1: PongPlayer
+    player2: PongPlayer
+    ball: Ball
 
     roundsAmount: int           # total # of rounds, best of X
     winThreshold: int           # how many rounds needed to win
@@ -56,14 +68,6 @@ class PongGame:
     def getRoundNumber(self):
         return self.p1Rounds + self.p2Rounds + 1
 
-# Class to handle the players in the game
-class PongPlayer:
-    pass
-
 # Class to manage the pong board
 class PongTable:
-    pass
-
-# Class to work the paddles
-class PongPaddle:
     pass

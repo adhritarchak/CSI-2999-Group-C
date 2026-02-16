@@ -9,6 +9,7 @@ class Ball:
     radius: int  # radius of the ball
     gravity: float = 0.1  # gravity affecting the ball's vertical movement
     bounciness: float = 0.99  # how much the ball bounces back after hitting the ground (0 to 1)
+    draw_prediction: bool = False  # whether to draw a prediction of the ball's trajectory
 
     def __init__(self, x, y, height, speed_x, speed_y, radius):
         self.__position = (x, y, height)
@@ -28,6 +29,10 @@ class Ball:
         self.gravity = gravity
     def set_bounciness(self, bounciness):
         self.bounciness = bounciness
+    def do_draw_prediction(self, value: bool):
+        '''Draw a prediction of the ball's trajectory on the screen.'''
+        # This function can be implemented to show a trajectory prediction for the ball, which could be useful for certain card effects.
+        self.draw_prediction = value
 
     def impulse(self, impulse: tuple[float, float, float]):
         '''Apply an impulse to the ball, changing its velocity.'''
@@ -58,7 +63,86 @@ class Ball:
     
     def draw(self, screen):
         self.update_position()  # Update the ball's position before drawing
+        pg.draw.circle(screen, (60, 60, 60), (int(self.__position[X]), int(self.__position[Y] + self.radius)), max(1, self.radius - (self.__position[HEIGHT] // 20)))  # Shadow
         pg.draw.circle(screen, self.color, (int(self.__position[X]), int(self.__position[Y] - self.__position[HEIGHT])), self.radius)
+
+        if(self.draw_prediction):
+            # Implement drawing the trajectory prediction here
+            self.draw_trajectory(screen)
+            self.draw_ground_trajectory(screen)
+
+    def draw_trajectory(self, screen):
+        '''Draw a prediction of the ball's trajectory on the screen.'''
+        # Create a list to store predicted positions
+        predicted_positions: list[tuple] = []
+        current_pos = self.__position
+        current_vel = self.__velocity
+
+        # Predict positions for a few steps ahead
+        for _ in range(100):  # Predict 100 steps ahead
+            current_pos = (
+                current_pos[X] + current_vel[X],
+                current_pos[Y] + current_vel[Y],
+                current_pos[HEIGHT] + current_vel[HEIGHT]
+            )
+            predicted_positions.append(current_pos)
+
+            # Apply gravity (simulate downward acceleration)
+            current_vel = (
+                current_vel[X],
+                current_vel[Y],
+                current_vel[HEIGHT] - self.gravity
+            )
+
+            # Check for ground collision
+            if current_pos[HEIGHT] < 0:
+                current_pos = (current_pos[X], current_pos[Y], 0)  # Reset height to ground level
+                current_vel = (
+                    current_vel[X],
+                    current_vel[Y] * self.bounciness,
+                    -current_vel[HEIGHT] * self.bounciness
+                )  # Bounce off the ground
+            if current_pos[X] < self.__bounds[LEFT] + self.radius or current_pos[X] > self.__bounds[RIGHT] - self.radius:  # If the ball goes off the left or right bounds
+                current_vel = (-current_vel[X], current_vel[Y], current_vel[HEIGHT])  # Bounce horizontally
+            if current_pos[Y] < self.__bounds[TOP] + self.radius or current_pos[Y] > self.__bounds[BOTTOM] - self.radius:  # If the ball goes off the top or bottom bounds
+                current_vel = (current_vel[X], -current_vel[Y], current_vel[HEIGHT])  # Bounce vertically
+
+        # Draw the trajectory as a series of lines
+        for i in range(len(predicted_positions) - 1):
+            pg.draw.line(screen, (255, 255, 255), (int(predicted_positions[i][X]), int(predicted_positions[i][Y] - predicted_positions[i][HEIGHT])),
+                          (int(predicted_positions[i+1][X]), int(predicted_positions[i+1][Y] - predicted_positions[i+1][HEIGHT])), 2)
+    def draw_ground_trajectory(self, screen):
+        '''Draw a prediction of where the ball will hit the ground on the screen.'''
+        # Create a list to store predicted positions
+        predicted_positions: list[tuple] = []
+        current_pos = self.__position
+        current_vel = self.__velocity
+
+        # Predict positions for a few steps ahead
+        for _ in range(100):  # Predict 100 steps ahead
+            current_pos = (
+                current_pos[X] + current_vel[X],
+                current_pos[Y] + current_vel[Y]
+            )
+            predicted_positions.append(current_pos)
+
+            # Apply gravity (simulate downward acceleration)
+            current_vel = (
+                current_vel[X],
+                current_vel[Y]
+            )
+
+            if current_pos[X] < self.__bounds[LEFT] + self.radius or current_pos[X] > self.__bounds[RIGHT] - self.radius:  # If the ball goes off the left or right bounds
+                current_vel = (-current_vel[X], current_vel[Y])  # Bounce horizontally
+            if current_pos[Y] < self.__bounds[TOP] + self.radius or current_pos[Y] > self.__bounds[BOTTOM] - self.radius:  # If the ball goes off the top or bottom bounds
+                current_vel = (current_vel[X], -current_vel[Y])  # Bounce vertically
+
+        # Draw the trajectory as a series of lines
+        for i in range(len(predicted_positions) - 1):
+            pg.draw.line(screen, (100, 100, 100), (int(predicted_positions[i][X]), int(predicted_positions[i][Y])),
+                          (int(predicted_positions[i+1][X]), int(predicted_positions[i+1][Y])), 2)
+        
+        
 
     def update_position(self):
         self.__position = (

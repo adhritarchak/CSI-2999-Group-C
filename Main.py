@@ -28,7 +28,7 @@ def main():
     pg.draw.rect(screen, (255, 0, 0), paddle_rect)
     
     ball = Ball(x=30, y=300, height=100, speed_x=1.5, speed_y=0.2, radius=8)
-    ball.draw(screen)
+    ball.do_draw_prediction(True)
 
     running = True
     while running:
