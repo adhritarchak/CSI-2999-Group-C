@@ -1,5 +1,6 @@
 import pygame
 import sys
+from Pong import *
 
 pygame.init()
 
@@ -111,25 +112,8 @@ def draw_table():
         Midline_Thickness
     )
 
-def draw_ball(bx, by, bheight):
-    # shadow 
-    shadow_offset = bheight * 0.3
-    shadow_radius = max(3, int(Ball_Radius * (1 - bheight / 150)))
-    shadow_transparency = max(30, int(150 * (1 - bheight / 150)))
-
-    shadow_surface = pygame.Surface((shadow_radius * 2, shadow_radius * 2), pygame.SRCALPHA)
-    pygame.draw.circle(shadow_surface, (0, 50, 0, shadow_transparency),
-                       (shadow_radius, shadow_radius), shadow_radius)
-    screen.blit(shadow_surface, 
-                (int(bx - shadow_radius + shadow_offset), 
-                 int(by - shadow_radius + shadow_offset))) 
-
-
-    # actual ball
-    ball_screen_y = by - bheight
-    pygame.draw.circle(screen, ORANGE, (int(bx), int(ball_screen_y)), Ball_Radius)
-    pygame.draw.circle(screen, WHITE, (int(bx), int(ball_screen_y)), Ball_Radius, 2)
-
+ball = Ball(x=100, y=300, height=50, speed_x=2, speed_y=1.2, radius=8)
+ball.set_bounds(top=100, bottom=Height, left=0, right=Width)
 
 # actual game
 running = True
@@ -160,59 +144,22 @@ while running:
     if keys[pygame.K_RIGHT] and paddle2_x + 20 < Right_Boundary:
         paddle2_x += Paddle_Speed
 
-    # Trying to make a ball
-    ball_vel_z -= Gravity
-    ball_height += ball_vel_z
+        # if p1_hit:
+        #     ball_vel_x = min(abs(ball_vel_x) + paddle_hit_boost, Max_Speed)
+        #     ball_vel_y = (min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1))
+        #     ball_vel_z = Bounce_MinZ
 
-    # bounce when ball hits table
-    if ball_height <= 0:
-        ball_height = 0
-        ball_vel_z = abs(ball_vel_z) * BounceSpeedLost
-
-        # reduce speed on bounce
-        ball_vel_x *= 0.9
-        ball_vel_y *= 0.9
-
-        # keeping ball velocity
-        if ball_vel_z < Bounce_MinZ:
-            ball_vel_z = Bounce_MinZ
-
-    ball_x += ball_vel_x
-    ball_y += ball_vel_y
-
-    # ball collision with walls
-    if ball_x - Ball_Radius <= Left_Boundary or ball_x + Ball_Radius >= Right_Boundary:
-        ball_vel_x *= -1
-        ball_x = max(Left_Boundary + Ball_Radius, min(ball_x, Right_Boundary - Ball_Radius))
-
-    if ball_y - Ball_Radius <= Top_Boundary or ball_y + Ball_Radius >= Bot_Boundary:
-        ball_vel_y *= -1
-        ball_y = max(Top_Boundary + Ball_Radius, min(ball_y, Bot_Boundary - Ball_Radius))
-
-    # ball collision with paddles
-    if ball_height < 15:
-        p1_hit = (paddle1_x < ball_x < paddle1_x + Paddle_Width and 
-                  paddle1_y < ball_y < paddle1_y + Paddle_Height)
-        p2_hit = (paddle2_x < ball_x < paddle2_x + Paddle_Width and 
-                  paddle2_y < ball_y < paddle2_y + Paddle_Height)
-
-        if p1_hit:
-            ball_vel_x = min(abs(ball_vel_x) + paddle_hit_boost, Max_Speed)
-            ball_vel_y = (min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1))
-            ball_vel_z = Bounce_MinZ
-
-        if p2_hit:
-            ball_vel_x = max(-(abs(ball_vel_x) + paddle_hit_boost), -Max_Speed)
-            ball_vel_y = (min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1))
-            ball_vel_z = Bounce_MinZ
+        # if p2_hit:
+        #     ball_vel_x = max(-(abs(ball_vel_x) + paddle_hit_boost), -Max_Speed)
+        #     ball_vel_y = (min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1))
+        #     ball_vel_z = Bounce_MinZ
 
     draw_table()
 
     screen.blit(paddle1_surface, (paddle1_x, paddle1_y))
     screen.blit(paddle2_surface, (paddle2_x, paddle2_y))
 
-    draw_ball(ball_x, ball_y, ball_height)
-
+    ball.draw(screen=screen)
     pygame.display.flip()
     clock.tick(FPS)
 
