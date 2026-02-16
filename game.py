@@ -37,8 +37,6 @@ Paddle_Height = 80
 BasePaddleSpeed = 5
 SmashPaddle1Speed = BasePaddleSpeed * 0.3
 SmashPaddle2Speed = BasePaddleSpeed * 0.3
-CurrentPaddle1Speed = SmashPaddle1Speed if Smash1_active else BasePaddleSpeed
-CurrentPaddle2Speed = SmashPaddle2Speed if Smash2_active else BasePaddleSpeed
 Smash_start_time = 0
 Smash1_hold_time = 0
 Smash1_active = False
@@ -150,6 +148,8 @@ while running:
             running = False
     dt = clock.tick(FPS)
     keys = pygame.key.get_pressed()
+    CurrentPaddle1Speed = SmashPaddle1Speed if Smash1_active else BasePaddleSpeed
+    CurrentPaddle2Speed = SmashPaddle2Speed if Smash2_active else BasePaddleSpeed       
 
     # paddle 1 movement (WASD)
     if keys[pygame.K_w] and paddle1_y > Top_Boundary:
@@ -171,8 +171,7 @@ while running:
             CurrentPaddle1Speed = SmashPaddle1Speed
             Smash1_hit = False
     if Smash1_active == True:
-        if paddle1_x < ball_x < paddle1_x + 20 and paddle1_y < ball_y < paddle1_y + 80:
-                ball_vel_x = Max_Speed
+                ball_vel_x = min(abs(ball_vel_x) + 5, Max_Speed)
                 Smash1_hit = True
     if Smash1_active and pygame.time.get_ticks() - Smash1_start_time >= Smash_duration:
             Smash1_active = False
@@ -191,7 +190,7 @@ while running:
         paddle2_x += CurrentPaddle2Speed * (dt / 16.67)
     if keys[pygame.K_RETURN]: # regular
         if paddle2_x < ball_x < paddle2_x + 20 and paddle2_y < ball_y < paddle2_y + 80:
-            ball_vel_x += 3 
+            ball_vel_x -= 3 
     if keys[pygame.K_RSHIFT]: #smash
         Smash2_hold_time += dt
     if Smash2_hold_time >= 3000 and not Smash2_active:
@@ -200,13 +199,13 @@ while running:
             CurrentPaddle2Speed = SmashPaddle2Speed
             Smash2_hit = False
     if Smash2_active == True:
-        if paddle2_x < ball_x < paddle2_x + 20 and paddle2_y < ball_y < paddle2_y + 80:
-                ball_vel_x = Max_Speed
+            if paddle2_x < ball_x < paddle2_x + 20 and paddle2_y < ball_y < paddle2_y + 80:
+                ball_vel_x += 5
                 Smash2_hit = True
     if Smash2_active and pygame.time.get_ticks() - Smash2_start_time >= Smash_duration:
             Smash2_active = False
             Smash2_hold_time = 0
-            Paddle2_Speed = BasePaddleSpeed 
+            CurrentPaddle2Speed = BasePaddleSpeed 
             Smash2_hit = False
 
     # Trying to make a ball
@@ -238,22 +237,25 @@ while running:
         ball_vel_y *= -1
         ball_y = max(Top_Boundary + Ball_Radius, min(ball_y, Bot_Boundary - Ball_Radius))
 
-    # ball collision with paddles
+    #ball collision with paddles
     if ball_height < 15:
         p1_hit = (paddle1_x < ball_x < paddle1_x + Paddle_Width and 
                   paddle1_y < ball_y < paddle1_y + Paddle_Height)
         p2_hit = (paddle2_x < ball_x < paddle2_x + Paddle_Width and 
                   paddle2_y < ball_y < paddle2_y + Paddle_Height)
 
-        if p1_hit:
+        if p1_hit and ball_vel_x < 0:
+
             ball_vel_x = min(abs(ball_vel_x) + paddle_hit_boost, Max_Speed)
             ball_vel_y = (min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1))
             ball_vel_z = Bounce_MinZ
 
-        if p2_hit:
+        if p2_hit and ball_vel_x > 0:
             ball_vel_x = max(-(abs(ball_vel_x) + paddle_hit_boost), -Max_Speed)
             ball_vel_y = (min(abs(ball_vel_y), Max_Speed) * (1 if ball_vel_y > 0 else -1))
             ball_vel_z = Bounce_MinZ
+
+    
 
     draw_table()
 
