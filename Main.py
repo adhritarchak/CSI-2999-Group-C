@@ -12,11 +12,8 @@ class Paddle:
         paddleImages = list[pg.Surface]
     def animate_paddle():
         pass
-    def smash_hit(self, ball):
-        self.speed_x *= 1.5
-        self.speed_y *= 1.5
-        ball.speed_x *= 1.5
-        ball.speed_y *= 1.5
+    def smash_hit(self, ball: Ball):
+        ball.impulse((ball.velocity()[X] * 1.5, ball.velocity()[Y] * 1.5, 0))
 def main():
     pg.init()
     screen = pg.display.set_mode(SCREEN_SIZE)

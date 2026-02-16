@@ -1,7 +1,7 @@
 import pygame as pg
 from Enums import *
 from ball import *
-from cards import *
+from Cards import *
 
 # Class to work the paddles
 class PongPaddle:

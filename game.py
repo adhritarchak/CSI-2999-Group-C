@@ -37,29 +37,6 @@ Paddle_Boost = 1.4
 Paddle_Width = 20
 Paddle_Height = 80
 
-# Ball Constants
-Ball_Radius = 10
-Ball_Max_Height = 25
-
-# Ball Physics Constants
-ball_init_vel_x = 3
-ball_init_vel_y = 1.5
-ball_init_vel_z = 8
-Gravity = 0.35
-BounceSpeedLost = 0.85
-Max_Speed = 8
-Bounce_MinZ = 8
-paddle_hit_boost = 1
-
-ball_x = Width // 2
-ball_y = Height // 2
-ball_vel_x = 1
-ball_vel_y = 0.8
-ball_height = 0
-ball_vel_z = 0
-
-
-
 # colors constants
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)

@@ -23,6 +23,8 @@ class Ball:
     
     def height(self):
         return self.__position[HEIGHT]
+    def is_falling(self):
+        return self.__velocity[HEIGHT] < 0
     def xy_pos(self) -> tuple[float, float]:
         return (self.__position[X], self.__position[Y])
     
@@ -57,7 +59,7 @@ class Ball:
         self.__velocity = (
             self.__velocity[X] - 2 * dot_product * normal_x,
             self.__velocity[Y] - 2 * dot_product * normal_y,
-            self.__velocity[HEIGHT]
+            -self.__velocity[HEIGHT]
         )
     
     def draw(self, screen):
