@@ -1,5 +1,46 @@
 import pygame as pg
 from Enums import *
+from math import *
+from colorsys import hsv_to_rgb
+
+class TrailQueue:
+    trailPositions: list[tuple[float, float, float]]
+    trailHead: int
+    trailSize: int
+
+    def __init__(self, length: int = 100):
+        self.trailPositions = []
+        self.trailHead = 0
+        self.trailSize = length
+
+    def length(self) -> int:
+        return len(self.trailPositions)
+
+    def push(self, value: tuple[float, float, float]):
+        if len(self.trailPositions) < self.trailSize:
+            self.trailPositions.append(value)
+            return
+        if self.trailHead == self.trailSize - 1:
+            self.trailHead = 0
+            self.trailPositions[-1] = value
+        else:
+            self.trailPositions[self.trailHead] = value
+            self.trailHead += 1
+
+    def clear(self):
+        self.trailPositions = []
+        self.trailHead = 0
+
+    def iter(self) -> list[tuple[float, float, float]]:
+        out = self.trailPositions[self.trailHead:]
+        if self.trailHead != 0:
+            out += self.trailPositions[:self.trailHead]
+        return out
+    def positionList(self) -> list[tuple[float, float]]:
+        out = []
+        for pos in self.iter():
+            out.append((pos[X], pos[Y] - pos[HEIGHT]))
+        return out
 class Ball:
     '''Class to manage the ball in the game.'''
     __position: tuple[float, float, float]  # (x, y) coordinates of the ball
@@ -11,18 +52,24 @@ class Ball:
     bounciness: float = 0.99  # how much the ball bounces back after hitting the ground (0 to 1)
     draw_prediction: bool = False  # whether to draw a prediction of the ball's trajectory
     ellipse_scale: tuple[float, float] = (1.8, 1.2)  # scale of the ellipse drawn at the predicted landing position (x scale, y scale)
+    trailPositions: TrailQueue
+    trailThickness: int = 8
 
     def __init__(self, x, y, height, speed_x, speed_y, radius):
         self.__position = (x, y, height)
         self.__velocity = (speed_x, speed_y, 0)  # Vertical speed starts at 0
         self.__bounds = (0, 600, 0, 800)  # Default bounds for the ball to move in (top, bottom, left, right)
         self.radius = radius
+        
+        self.trailPositions = TrailQueue(length=50)
 
-    def velocity(self):
-        return self.__velocity
-    
+    def velocity(self) -> tuple[float, float]:
+        return (self.__velocity[X], self.__velocity[Y])
+    def velocityMagnitude(self):
+        return dist((0,0), self.velocity())
     def height(self):
         return self.__position[HEIGHT]
+    
     def is_falling(self):
         return self.__velocity[HEIGHT] < 0
     def xy_pos(self) -> tuple[float, float]:
@@ -68,9 +115,11 @@ class Ball:
             self.__velocity[Y] - 2 * dot_product * normal_y,
             -self.__velocity[HEIGHT]
         )
+        self.trailPositions.clear()
     
     def draw(self, screen):
         self.update_position()  # Update the ball's position before drawing
+        self.draw_trail(screen)
         pg.draw.circle(surface=screen, color=(60, 60, 60), center=(int(self.__position[X]), int(self.__position[Y] + self.radius)), radius=max(1, self.radius - (self.__position[HEIGHT] // 20)))  # Shadow
         pg.draw.circle(surface=screen, color=self.color, center=(int(self.__position[X]), int(self.__position[Y] - self.__position[HEIGHT])), radius=self.radius)
         self.draw_trajectory(screen, self.draw_prediction)
@@ -116,7 +165,7 @@ class Ball:
         bounces = 0
         for _ in range(1000):  # Predict until the ball bounces twice or 1000 steps have been calculated
             current_pos, current_vel = self.step_physics(current_pos, current_vel)
-            predicted_positions.append(current_pos)
+            predicted_positions.append((current_pos[X], current_pos[Y] - current_pos[HEIGHT]))
             if current_pos[HEIGHT] <= 0:  # Stop prediction if ball bounces twice
                 bounces += 1
                 if bounces >= 2:
@@ -124,10 +173,8 @@ class Ball:
 
         # Draw the trajectory as a series of lines
         if draw_lines:
-            for i in range(len(predicted_positions) - 1):
-                pg.draw.line(screen, (255, 255, 255), (int(predicted_positions[i][X]), int(predicted_positions[i][Y] - predicted_positions[i][HEIGHT])),
-                          (int(predicted_positions[i+1][X]), int(predicted_positions[i+1][Y] - predicted_positions[i+1][HEIGHT])), 2)
-            
+            pg.draw.lines(surface=screen, color=WHITE, closed=False, points=predicted_positions, width=2)
+              
         pg.draw.ellipse(surface=screen, color=(255, 255, 255), width=2, rect=pg.Rect(predicted_positions[-1][X] - self.ellipse_scale[X] * self.radius, 
                 predicted_positions[-1][Y] - self.ellipse_scale[Y] * self.radius, self.ellipse_scale[X] * 2 * self.radius, 
                 self.ellipse_scale[Y] * 2 * self.radius))  # Draw an ellipse at the final predicted position
@@ -142,19 +189,34 @@ class Ball:
         bounces = 0
         for _ in range(1000):  # Predict until the ball hits the ground twice or 1000 steps have been calculated
             current_pos, current_vel = self.step_physics(current_pos, current_vel)
-            predicted_positions.append(current_pos)
+            predicted_positions.append((current_pos[X], current_pos[Y]))
             if current_pos[HEIGHT] <= 0:  # Stop prediction if ball bounces twice
                 bounces += 1
                 if bounces >= 2:
                     break
 
         # Draw the trajectory as a series of lines
-        for i in range(len(predicted_positions) - 1):
-            pg.draw.line(screen, (100, 100, 100), (int(predicted_positions[i][X]), int(predicted_positions[i][Y])),
-                          (int(predicted_positions[i+1][X]), int(predicted_positions[i+1][Y])), 2)
-        
+        pg.draw.lines(surface=screen, color=(100,100,100), closed=False, points=predicted_positions, width=2)
+         
     def update_position(self):
         self.__position, self.__velocity = self.step_physics(self.__position, self.__velocity)
+        self.trailPositions.push(self.__position)
+
+    def draw_trail(self, screen: pg.Surface):
+        if self.trailPositions.length() < 2:
+            return
+        points = self.trailPositions.positionList()
+        trailColor = hsv_to_rgb(1 - min(self.velocityMagnitude() / 5, 1), 1, 1)
+        trailColor = (
+            int(trailColor[0] * 255),
+            int(trailColor[1] * 255),
+            int(trailColor[2] * 255)
+        )
+        
+        pg.draw.lines(surface=screen, color=WHITE, closed=False, 
+                      points=points, width=self.trailThickness)
+        pg.draw.lines(surface=screen, color=trailColor, closed=False,
+                       points=points, width=int(self.trailThickness / 2))
 
 ball_characteristics = Ball(x=30, y=300, height=100, speed_x=1.5, speed_y=0.2, radius=8)  # Example initialization
 ball_characteristics.draw(pg.display.set_mode((800, 600)))  # Example drawing on a Pygame screen

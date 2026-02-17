@@ -4,8 +4,6 @@ from Pong import *
 
 pygame.init()
 
-# random constants
-
 # Window Constants
 Width = 1000
 Height = 600
