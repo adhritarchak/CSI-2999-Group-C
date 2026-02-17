@@ -105,6 +105,13 @@ class Ball:
             self.__velocity[Y] + impulse[Y],
             self.__velocity[HEIGHT] + impulse[HEIGHT]
         )
+    def impulse(self, impulse: tuple[float, float]):
+        '''Apply an impulse to the ball, changing its velocity.'''
+        self.__velocity = (
+            self.__velocity[X] + impulse[X],
+            self.__velocity[Y] + impulse[Y],
+            self.__velocity[HEIGHT]
+        )
     def bounce(self, normal_x: float, normal_y: float):
         '''Bounce the ball off a surface with the given normal vector.'''
         # Calculate the dot product of the velocity and the normal
@@ -116,6 +123,12 @@ class Ball:
             -self.__velocity[HEIGHT]
         )
         self.trailPositions.clear()
+    def multiplyVelocity(self, value: float):
+        self.__velocity = (
+            self.__velocity[X] * value,
+            self.__velocity[Y] * value,
+            self.__velocity[HEIGHT]
+        )
     
     def draw(self, screen):
         self.update_position()  # Update the ball's position before drawing
@@ -206,17 +219,54 @@ class Ball:
         if self.trailPositions.length() < 2:
             return
         points = self.trailPositions.positionList()
-        trailColor = hsv_to_rgb(1 - min(self.velocityMagnitude() / 5, 1), 1, 1)
+        trailColor = hsv_to_rgb(1 - min(self.velocityMagnitude() / MAX_VELOCITY, 1), 1, 1)
         trailColor = (
             int(trailColor[0] * 255),
             int(trailColor[1] * 255),
             int(trailColor[2] * 255)
         )
-        
+        if len(points) >= int(self.trailPositions.trailSize / 4):
+            pg.draw.lines(surface=screen, color=WHITE, closed=False, 
+                        points=points[:int(self.trailPositions.trailSize / 4)], 
+                        width=int(self.trailThickness / 4))
+        else:
+            pg.draw.lines(surface=screen, color=WHITE, closed=False, 
+                        points=points, width=int(self.trailThickness / 4))
+            return
+        if len(points) >= int(self.trailPositions.trailSize / 2):
+            pg.draw.lines(surface=screen, color=WHITE, closed=False, 
+                        points=points[int(self.trailPositions.trailSize / 4):int(self.trailPositions.trailSize / 2)],
+                        width=int(self.trailThickness / 2))
+            pg.draw.lines(surface=screen, color=trailColor, closed=False,
+                        points=points[int(self.trailPositions.trailSize / 4):int(self.trailPositions.trailSize / 2)], 
+                        width=int(self.trailThickness / 4) - 1)
+        else:
+            pg.draw.lines(surface=screen, color=WHITE, closed=False, 
+                        points=points[int(self.trailPositions.trailSize / 4) - 2:], 
+                        width=int(self.trailThickness / 2))
+            pg.draw.lines(surface=screen, color=trailColor, closed=False,
+                        points=points[int(self.trailPositions.trailSize / 4) - 2:], 
+                        width=int(self.trailThickness / 4) - 1)
+            return
+        if len(points) >= int(self.trailPositions.trailSize * 3/4):
+            pg.draw.lines(surface=screen, color=WHITE, closed=False, 
+                        points=points[int(self.trailPositions.trailSize / 2):int(self.trailPositions.trailSize * 3/4)],
+                        width=int(self.trailThickness * 3/4))
+            pg.draw.lines(surface=screen, color=trailColor, closed=False,
+                        points=points[int(self.trailPositions.trailSize / 2):int(self.trailPositions.trailSize * 3/4)], 
+                        width=int(self.trailThickness * 3/8))
+        else:
+            pg.draw.lines(surface=screen, color=WHITE, closed=False, 
+                        points=points[int(self.trailPositions.trailSize / 2) - 2:], 
+                        width=int(self.trailThickness * 3/4))
+            pg.draw.lines(surface=screen, color=trailColor, closed=False,
+                        points=points[int(self.trailPositions.trailSize / 2) - 2:], 
+                        width=int(self.trailThickness * 3/8))
+            return
         pg.draw.lines(surface=screen, color=WHITE, closed=False, 
-                      points=points, width=self.trailThickness)
+                    points=points[int(self.trailPositions.trailSize * 3/4) - 2:], width=int(self.trailThickness))
         pg.draw.lines(surface=screen, color=trailColor, closed=False,
-                       points=points, width=int(self.trailThickness / 2))
+                    points=points[int(self.trailPositions.trailSize * 3/4) - 2:], width=int(self.trailThickness / 2))
 
 ball_characteristics = Ball(x=30, y=300, height=100, speed_x=1.5, speed_y=0.2, radius=8)  # Example initialization
 ball_characteristics.draw(pg.display.set_mode((800, 600)))  # Example drawing on a Pygame screen

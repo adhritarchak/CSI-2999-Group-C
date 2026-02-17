@@ -97,6 +97,7 @@ while running:
 
     if ball.height() < 15 and ball.within_rect(paddle1.get_rect(), paddle1.position):
         ball.bounce(1, 0)
+        ball.impulse((paddle1.velocity[X] * 0.5, paddle1.velocity[Y] * 0.5))
     if ball.height() < 15 and ball.within_rect(paddle2.get_rect(), paddle2.position):
         ball.bounce(-1, 0)
 

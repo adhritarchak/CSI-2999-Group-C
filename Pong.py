@@ -9,6 +9,7 @@ class PongPaddle:
     position: tuple[float, float]
     bounds: tuple[float, float, float, float]
     speed: float
+    velocity: tuple[float, float]
 
     upKey: int = -1
     downKey: int = -1
@@ -22,6 +23,7 @@ class PongPaddle:
         pg.draw.rect(surface=self.paddleSurface, color=WHITE, rect=(0, 0, width, height), width=2)
         self.position = initialPos
         self.speed = speed
+        self.velocity = (0, 0)
 
     def get_rect(self):
         return self.paddleSurface.get_rect()
@@ -58,7 +60,10 @@ class PongPaddle:
         if self.rightKey >= 0:
             if keyList[self.rightKey] and self.position[X] < self.bounds[RIGHT]:
                 move_x += self.speed
-
+        self.velocity = (
+            move_x,
+            move_y
+        )
         self.position = (
             self.position[X] + move_x,
             self.position[Y] + move_y
