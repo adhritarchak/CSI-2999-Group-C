@@ -1,11 +1,71 @@
 import pygame as pg
 from Enums import *
 from ball import *
-from Cards import *
+from cards import *
 
 # Class to work the paddles
 class PongPaddle:
-    pass
+    paddleSurface: pg.Surface
+    position: tuple[float, float]
+    bounds: tuple[float, float, float, float]
+    speed: float
+
+    upKey: int = -1
+    downKey: int = -1
+    leftKey: int = -1
+    rightKey: int = -1
+
+    def __init__(self, width: int, height: int, color: tuple[int, int, int],
+             initialPos: tuple[float, float] = (0, 0), speed: float = 1):
+        self.paddleSurface = pg.Surface((width, height))
+        self.paddleSurface.fill(color)
+        pg.draw.rect(surface=self.paddleSurface, color=WHITE, rect=(0, 0, width, height), width=2)
+        self.position = initialPos
+        self.speed = speed
+
+    def get_rect(self):
+        return self.paddleSurface.get_rect()
+
+    def setPosition(self, x: float, y: float):
+        self.position = (x, y)
+
+    def setBounds(self, topBound: float, botBound: float, leftBound: float, rightBound: float):
+        self.bounds = (
+            topBound,
+            botBound,
+            leftBound,
+            rightBound
+        )
+
+    def setKeys(self, upKey: int = -1, downKey: int = -1, leftKey: int = -1, rightKey: int = -1):
+        self.upKey = upKey
+        self.downKey = downKey
+        self.leftKey = leftKey
+        self.rightKey = rightKey
+
+    def process_keys(self, keyList):
+        move_x = 0
+        move_y = 0
+        if self.upKey >= 0:
+            if keyList[self.upKey] and self.position[Y] > self.bounds[TOP]:
+                move_y -= self.speed
+        if self.downKey >= 0:
+            if keyList[self.downKey] and self.position[Y] < self.bounds[BOTTOM]:
+                move_y += self.speed
+        if self.leftKey >= 0:
+            if keyList[self.leftKey] and self.position[X] > self.bounds[LEFT]:
+                move_x -= self.speed
+        if self.rightKey >= 0:
+            if keyList[self.rightKey] and self.position[X] < self.bounds[RIGHT]:
+                move_x += self.speed
+
+        self.position = (
+            self.position[X] + move_x,
+            self.position[Y] + move_y
+        )
+
+    def draw(self, screen: pg.Surface):
+        screen.blit(self.paddleSurface, self.position)
 
 # Class to handle the players in the game
 class PongPlayer:

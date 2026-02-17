@@ -35,6 +35,13 @@ class Ball:
                 and self.__position[Y] > rect.top + y_offset and self.__position[Y] < rect.bottom + y_offset:
             return True
         return False
+    def within_rect(self, rect: pg.Rect, offset: tuple[float, float]) -> bool:
+        x_offset = offset[X]
+        y_offset = offset[Y]
+        if self.__position[X] > rect.left + x_offset and self.__position[X] < rect.right + x_offset \
+                and self.__position[Y] > rect.top + y_offset and self.__position[Y] < rect.bottom + y_offset:
+            return True
+        return False
     def set_gravity(self, gravity):
         self.gravity = gravity
     def set_bounciness(self, bounciness):
