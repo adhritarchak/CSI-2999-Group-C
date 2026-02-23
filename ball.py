@@ -69,6 +69,8 @@ class Ball:
         return dist((0,0), self.velocity())
     def height(self):
         return self.__position[HEIGHT]
+    def heightVelo(self) -> float:
+        return self.__velocity[HEIGHT]
     
     def is_falling(self):
         return self.__velocity[HEIGHT] < 0

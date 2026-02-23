@@ -95,11 +95,12 @@ while running:
     paddle1.process_keys(keys)
     paddle2.process_keys(keys)
 
-    if ball.height() < 15 and ball.within_rect(paddle1.get_rect(), paddle1.position):
+    if ball.height() < 15 and ball.within_rect(paddle1.get_rect(), paddle1.position) and ball.heightVelo() < 0:
         ball.bounce(1, 0)
         ball.impulse((paddle1.velocity[X] * 0.5, paddle1.velocity[Y] * 0.5))
-    if ball.height() < 15 and ball.within_rect(paddle2.get_rect(), paddle2.position):
+    if ball.height() < 15 and ball.within_rect(paddle2.get_rect(), paddle2.position) and ball.heightVelo() < 0:
         ball.bounce(-1, 0)
+        ball.impulse((paddle2.velocity[X] * 0.5, paddle2.velocity[Y] * 0.5))
 
     draw_table()
 
