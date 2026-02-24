@@ -55,13 +55,14 @@ class Ball:
     trailPositions: TrailQueue
     trailThickness: int = 8
 
-    def __init__(self, x, y, height, speed_x, speed_y, radius):
+    def __init__(self, x, y, height, speed_x, speed_y, radius, spin):
         self.__position = (x, y, height)
         self.__velocity = (speed_x, speed_y, 0)  # Vertical speed starts at 0
         self.__bounds = (0, 600, 0, 800)  # Default bounds for the ball to move in (top, bottom, left, right)
         self.radius = radius
         
         self.trailPositions = TrailQueue(length=50)
+        self.spin = spin
 
     def velocity(self) -> tuple[float, float]:
         return (self.__velocity[X], self.__velocity[Y])
@@ -151,10 +152,11 @@ class Ball:
             pos[HEIGHT] + vel[HEIGHT]
         )
         nextVel = (
-            vel[X],
+            vel[X] + self.spin,  
             vel[Y],
             vel[HEIGHT] - self.gravity
         )
+        self.spin *= 0.98  # Dampen spin over time
 
         if nextPos[HEIGHT] < 0:  # If the ball hits the ground
             nextPos = (nextPos[X], nextPos[Y], 0)  # Reset height to ground level
@@ -270,6 +272,6 @@ class Ball:
         pg.draw.lines(surface=screen, color=trailColor, closed=False,
                     points=points[int(self.trailPositions.trailSize * 3/4) - 2:], width=int(self.trailThickness / 2))
 
-ball_characteristics = Ball(x=30, y=300, height=100, speed_x=1.5, speed_y=0.2, radius=8)  # Example initialization
-ball_characteristics.draw(pg.display.set_mode((800, 600)))  # Example drawing on a Pygame screen
+#ball_characteristics = Ball(x=30, y=300, height=100, speed_x=1.5, speed_y=0.2, radius=8, spin=0.1)  # Example initialization
+#ball_characteristics.draw(pg.display.set_mode((800, 600)))  # Example drawing on a Pygame screen
 ball_initial_position = (400, 300)  # Reset ball position to center
