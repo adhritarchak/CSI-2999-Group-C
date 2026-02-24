@@ -17,6 +17,13 @@ class PongPaddle:
     swingTimer: int = 0
     swingBackTime: int = 200
     swingForwardTime: int = 400
+    swingAngle: float = 0
+
+    smash_active: bool = False
+    smashTimer: int = 0
+    smashHoldTime: int = 3000
+    cooldownTime: int = 2000
+    smashAngle: float = 0
 
     upKey: int = -1
     downKey: int = -1
@@ -56,7 +63,7 @@ class PongPaddle:
         self.swingKey = swingKey
         self.smashKey = smashKey
 
-    def process_keys(self, keyList: dict[int, bool], dt: int):
+    def process_keys(self, keyList, dt: int):
         move_x = 0
         move_y = 0
         if self.upKey >= 0:
@@ -72,31 +79,24 @@ class PongPaddle:
             if keyList[self.rightKey] and self.position[X] < self.bounds[RIGHT]:
                 move_x += 1
         if keyList[self.swingKey]: # regular
-            self.swing()
-        if keyList[self.smashKey]: #smash
-            Smash1_hold_time += dt
-            self.currentSpeed = self.speed * 0.5
-            if Smash1_hold_time >= 3000 and not Smash1_active:
-                Smash1_active = True
-                # Smash1_start_time = pygame.time.get_ticks()
-                self.currentSpeed = self.speed
-                Smash1_hit = False
-        if not keyList[self.smashKey] and Smash1_active:
-                if not Smash1_hit:
-                    Smash1_active = False
-                    Smash1_hold_time = 0
-                    self.currentSpeed = self.speed
-        if Smash1_active == True and self.position[X] < ballConfig['init_x'] < self.position[X] + 20 and self.position[Y] < ballConfig['init_y'] < self.position[Y] + 80:
-            ballConfig['init_vel_x'] = min(abs(ballConfig['init_vel_x']) + 5, ballConfig['Max_Speed'])
-            Smash1_hit = True
-            self.currentSpeed = self.speed * 0.2
-            Smash1_hold_time = 0
-            Smash1_hit_time = pygame.time.get_ticks()
+            self.swinging = True
+        if keyList[self.smashKey] and not self.smash_active: #smash
+            self.smash_active = True
+        if self.smash_active and not keyList[self.smashKey]: #end smash
+            self.smash_active = False
+            self.smashTimer = 0
+            
+        # if smash_active and self.position[X] < ballConfig['init_x'] < self.position[X] + 20 and self.position[Y] < ballConfig['init_y'] < self.position[Y] + 80:
+        #     ballConfig['init_vel_x'] = min(abs(ballConfig['init_vel_x']) + 5, ballConfig['Max_Speed'])
+        #     Smash1_hit = True
+        #     self.currentSpeed = self.speed * 0.2
+        #     Smash1_hold_time = 0
+        #     Smash1_hit_time = pygame.time.get_ticks()
         
-        if Smash1_hit:
-            if pygame.time.get_ticks() - Smash1_hit_time >= 2000:  # 2 seconds recovery time
-                self.currentSpeed = self.speed
-                Smash1_hit = False
+        # if Smash1_hit:
+        #     if pygame.time.get_ticks() - Smash1_hit_time >= 2000:  # 2 seconds recovery time
+        #         self.currentSpeed = self.speed
+        #         Smash1_hit = False
 
         self.velocity = (
             move_x * self.currentSpeed,
@@ -106,28 +106,33 @@ class PongPaddle:
             self.position[X] + move_x,
             self.position[Y] + move_y
         )
-
-    def swing(self):
-        self.swinging = True
-        self.swingTimer = 0
-        # Advance to frame 2 of the swing animation
     def process_swing(self, dt: int):
-        if self.swinging:
-            self.swingTimer += dt
-            if self.swingTimer > self.swingBackTime // 2 and self.swingTimer <= self.swingBackTime:
-                pass # Advance to frame 3
-            elif self.swingTimer > self.swingBackTime and self.swingTimer <= self.swingForwardTime / 4:
-                self.can_hit_ball = True # Advance to frame 4 and activate the hitbox
-            elif self.swingTimer > self.swingForwardTime / 4 and self.swingTimer <= self.swingForwardTime / 2:
-                pass # Advance to frame 5
-            elif self.swingTimer > self.swingForwardTime / 2 and self.swingTimer <= self.swingForwardTime * 3 / 4:
-                self.can_hit_ball = False # Advance to frame 6 and deactivate the hitbox
-            elif self.swingTimer > self.swingForwardTime * 3 / 4 and self.swingTimer <= self.swingForwardTime:
-                pass # Advance to frame 7
-            elif self.swingTimer > self.swingForwardTime:
-                self.swinging = False
-                self.swingTimer = 0
+        if not self.swinging:
+            return
+        self.swingTimer += dt
+        if self.swingTimer <= self.swingBackTime // 2:
+            pass # Stay on frame 2
+        elif self.swingTimer > self.swingBackTime // 2 and self.swingTimer <= self.swingBackTime:
+            pass # Advance to frame 3
+        elif self.swingTimer > self.swingBackTime and self.swingTimer <= self.swingForwardTime / 4:
+            self.can_hit_ball = True # Advance to frame 4 and activate the hitbox
+        elif self.swingTimer > self.swingForwardTime / 4 and self.swingTimer <= self.swingForwardTime / 2:
+            pass # Advance to frame 5
+        elif self.swingTimer > self.swingForwardTime / 2 and self.swingTimer <= self.swingForwardTime * 3 / 4:
+            self.can_hit_ball = False # Advance to frame 6 and deactivate the hitbox
+        elif self.swingTimer > self.swingForwardTime * 3 / 4 and self.swingTimer <= self.swingForwardTime:
+            pass # Advance to frame 7
+        elif self.swingTimer > self.swingForwardTime:
+            self.swinging = False
+            self.swingTimer = 0
                 # Return to frame 1
+    def process_smash(self, dt: int):
+        if not self.smash_active:
+            self.currentSpeed = self.speed
+            return
+        self.smashTimer += dt
+        if self.smashTimer < self.smashHoldTime:
+            self.currentSpeed = self.speed * 0.2
 
     def draw(self, screen: pg.Surface):
         screen.blit(self.paddleSurface, self.position)

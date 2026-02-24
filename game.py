@@ -116,17 +116,23 @@ while running:
     dt = clock.tick(screenConfig['FPS'])
     keys = pygame.key.get_pressed()
 
-    paddle1.process_keys(keys)
-    paddle2.process_keys(keys)
+    paddle1.process_keys(keys, dt)
+    paddle2.process_keys(keys, dt)
 
-    if ball.height() < 15 and ball.within_rect(paddle1.get_rect(), paddle1.position) and ball.heightVelo() < 0:
-        ball.bounce(1, 0)
+    paddle1.process_swing(dt)
+    paddle2.process_swing(dt)
+
+    paddle1.process_smash(dt)
+    paddle2.process_smash(dt)
+
+    if ball.height() < 100 and ball.within_rect(paddle1.get_rect(), paddle1.position) \
+    and ball.heightVelo() < 0 and paddle1.can_hit_ball:
+        ball.bounce(1, paddle1.swingAngle)
         ball.impulse((paddle1.velocity[X] * 0.5, paddle1.velocity[Y] * 0.5))
-    if ball.height() < 15 and ball.within_rect(paddle2.get_rect(), paddle2.position) and ball.heightVelo() < 0:
-        ball.bounce(-1, 0)
-        ball.impulse((paddle2.velocity[X] * 0.5, paddle2.velocity[Y] * 0.5))
-    CurrentPaddle1Speed = paddleConfig['SmashPaddle1Speed'] if Smash1_active else paddleConfig['BasePaddleSpeed']
-    CurrentPaddle2Speed = paddleConfig['SmashPaddle2Speed'] if Smash2_active else paddleConfig['BasePaddleSpeed']       
+    if ball.height() < 100 and ball.within_rect(paddle2.get_rect(), paddle2.position) \
+    and ball.heightVelo() < 0 and paddle2.can_hit_ball:
+        ball.bounce(-1, paddle2.swingAngle)
+        ball.impulse((paddle2.velocity[X] * 0.5, paddle2.velocity[Y] * 0.5))      
     
     
     #elif Smash1_active and not (paddle1_x < ballConfig['init_x'] < paddle1_x + 20 and paddle1_y < ballConfig['init_y'] < paddle1_y + 80):
