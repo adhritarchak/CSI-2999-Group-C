@@ -16,11 +16,12 @@ class Card:
         self.type = cardType
         self.effects = []
 
-    def activate(self, caller: object):
+    def activate(self, caller: object = None, data: dict = None):
         '''The function to call when the card is used, which activates all of its effects. The caller parameter 
         is the object that will call the effects.'''
+        if caller is None: caller = self
         for effect in self.effects:
-            getattr(caller, effect)()
+            getattr(caller, effect)(data[effect])  # Pass data to each effect function
 
 class Deck:
     '''Stack for cards, has both a draw and discard pile for the cards.'''

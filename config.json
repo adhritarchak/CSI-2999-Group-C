@@ -23,7 +23,7 @@
         "Smash_start_time": 0
     }, 
     "Ball Physics": {
-        "Radius": 10, 
+        "Radius": 8, 
         "Max_Height": 25, 
         "Gravity": 0.35, 
         "BounceSpeedLost": 0.85, 

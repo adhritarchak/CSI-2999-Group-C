@@ -274,4 +274,3 @@ class Ball:
 
 #ball_characteristics = Ball(x=30, y=300, height=100, speed_x=1.5, speed_y=0.2, radius=8, spin=0.1)  # Example initialization
 #ball_characteristics.draw(pg.display.set_mode((800, 600)))  # Example drawing on a Pygame screen
-ball_initial_position = (400, 300)  # Reset ball position to center

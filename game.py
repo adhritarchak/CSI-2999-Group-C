@@ -84,7 +84,8 @@ def draw_table():
         tableConfig['Midline_Thickness']
     )
 
-ball = Ball(x=100, y=300, height=50, speed_x=2, speed_y=1.2, radius=8)
+ball = Ball(x=ballConfig['init_x'], y=ballConfig['init_y'], height=ballConfig['init_height'],
+             speed_x=ballConfig['init_vel_x'], speed_y=ballConfig['init_vel_y'], radius=ballConfig['Radius'])
 ball.set_bounds(top=Top_Boundary, bottom=Bot_Boundary, left=Left_Boundary, right=Right_Boundary)
 
 # actual game
@@ -109,7 +110,7 @@ while running:
                     'height': ballConfig['init_height'],
                     'radius': ballConfig['Radius']
                          }
-                    chosen_card.activate(ball_data) ##place holder for data, once we figure out which actual ball data we need I'll make it
+                    chosen_card.activate(data=ball_data) # place holder for data, once we figure out which actual ball data we need I'll make it
                     print("Activated card effect:", chosen_card.name)
                     chosen_card = None  # Clear the chosen card after activation
     dt = clock.tick(screenConfig['FPS'])
@@ -127,55 +128,11 @@ while running:
     CurrentPaddle1Speed = paddleConfig['SmashPaddle1Speed'] if Smash1_active else paddleConfig['BasePaddleSpeed']
     CurrentPaddle2Speed = paddleConfig['SmashPaddle2Speed'] if Smash2_active else paddleConfig['BasePaddleSpeed']       
     
-    # paddle 1 movement (WASD)
-    if keys[pygame.K_w] and paddle1_y > Top_Boundary:
-        paddle1_y -= CurrentPaddle1Speed * (dt / 16.67)
-    if keys[pygame.K_s] and paddle1_y + 80 < Bot_Boundary:
-        paddle1_y += CurrentPaddle1Speed * (dt / 16.67)
-    if keys[pygame.K_a] and paddle1_x > Left_Boundary:
-        paddle1_x -= CurrentPaddle1Speed * (dt / 16.67)
-    if keys[pygame.K_d] and paddle1_x + 20 < Center_x:
-        paddle1_x += CurrentPaddle1Speed * (dt / 16.67)
-    if keys[pygame.K_SPACE]: # regular
-        if paddle1_x < ballConfig['init_x'] < paddle1_x + 20 and paddle1_y < ballConfig['init_y'] < paddle1_y + 80:
-            ballConfig['init_vel_x'] += 3 
-    if keys[pygame.K_LSHIFT]: #smash
-        Smash1_hold_time += dt
-        CurrentPaddle1Speed = paddleConfig['BasePaddleSpeed'] * 0.5
-        if Smash1_hold_time >= 3000 and not Smash1_active:
-            Smash1_active = True
-            Smash1_start_time = pygame.time.get_ticks()
-            CurrentPaddle1Speed = paddleConfig['SmashPaddle1Speed']
-            Smash1_hit = False
-    if keys[pygame.K_LSHIFT] == False and Smash1_active:
-            if not Smash1_hit:
-                Smash1_active = False
-                Smash1_hold_time = 0
-                CurrentPaddle1Speed = paddleConfig['BasePaddleSpeed']
-    if Smash1_active == True and paddle1_x < ballConfig['init_x'] < paddle1_x + 20 and paddle1_y < ballConfig['init_y'] < paddle1_y + 80:
-        ballConfig['init_vel_x'] = min(abs(ballConfig['init_vel_x']) + 5, ballConfig['Max_Speed'])
-        Smash1_hit = True
-        CurrentPaddle1Speed = paddleConfig['BasePaddleSpeed'] * 0.2
-        Smash1_hold_time = 0
-        Smash1_hit_time = pygame.time.get_ticks()
-        
-    if Smash1_hit:
-        if pygame.time.get_ticks() - Smash1_hit_time >= 2000:  # 2 seconds recovery time
-            CurrentPaddle1Speed = paddleConfig['BasePaddleSpeed']
-            Smash1_hit = False
-
+    
     #elif Smash1_active and not (paddle1_x < ballConfig['init_x'] < paddle1_x + 20 and paddle1_y < ballConfig['init_y'] < paddle1_y + 80):
        #Smash1_hit = False
 
     # paddle 2 movement (arrow keys)
-    if keys[pygame.K_UP] and paddle2_y > Top_Boundary:
-        paddle2_y -= CurrentPaddle2Speed * (dt / 16.67)
-    if keys[pygame.K_DOWN] and paddle2_y + 80 < Bot_Boundary:
-        paddle2_y += CurrentPaddle2Speed * (dt / 16.67)
-    if keys[pygame.K_LEFT] and paddle2_x > Center_x:
-        paddle2_x -= CurrentPaddle2Speed * (dt / 16.67)
-    if keys[pygame.K_RIGHT] and paddle2_x + 20 < Right_Boundary:
-        paddle2_x += CurrentPaddle2Speed * (dt / 16.67)
     if keys[pygame.K_RETURN]: # regular
         if paddle2_x < ballConfig['init_x'] < paddle2_x + 20 and paddle2_y < ballConfig['init_y'] < paddle2_y + 80:
             ballConfig['init_vel_x'] -= 3 
