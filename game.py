@@ -1,6 +1,7 @@
 import pygame
 import sys
-
+import cards 
+from ball import Ball
 pygame.init()
 
 # random constants
@@ -12,6 +13,7 @@ FPS = 60
 screen = pygame.display.set_mode((Width, Height))
 pygame.display.set_caption("Supreme Pong")
 clock = pygame.time.Clock()
+font = pygame.font.SysFont("timesnewroman", 36)
 
 # Table Layout/Dimensions
 Table_Margin = 80
