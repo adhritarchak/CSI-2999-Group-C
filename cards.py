@@ -3,6 +3,7 @@ import json
 import pygame as pg
 import random
 from Enums import *
+from ball import Ball
 
 class Card:
     '''The class containing card data.'''
@@ -96,73 +97,112 @@ def loadDeck(pathname: str) -> Deck:
     except json.JSONDecodeError:
         print("Error: problem decoding json file at {}".format(pathname))
     return deck
+def set_velocity(self, vx, vy, vz):
+    Ball.set_velocity((vx, vy, vz))
         
-def arc_strike_effect():
+def arc_strike_effect(ball):
         print("Arc Strike activated!")
-        #if player.has_card("arc_strike"):
-            #ball.speed_x *= 1.5
-            #ball.speed_y *= 1.5
-            #player.has_card("arc_strike") = False
-        # Implement the effect of Arc Strike here
+        ball.impulse((4,0,6))
 
 
-def bigger_is_better_effect():
+def bigger_is_better_effect(ball, game):
         print("Bigger is better activated!")
-        #if player.has_card("bigger_is_better"):
-            #ball.radius *= 1.5
-            #player.has_card("bigger_is_better") = False
-        # Implement the effect of Bigger is better here
+        game.paddle1.radius += 5
+        game.paddle2.radius += 5
+        
 
-def bring_it_back_effect():
+def bring_it_back_effect(ball):
         print("Bring it back activated!")
-        #if player.has_card("bring_it_back"):
-            #ball.x, ball.y = player.initial_position()
-            #player.has_card("bring_it_back") = False
-        # Implement the effect of Bring it back here
+        vx, vy, vz = ball.get_velocity()
+        ball.set_velocity(-vx, -vy, vz)
 
-def shadow_clone_effect():
+def shadow_clone_effect(ball):
         print("Shadow Clone activated!")
         # Implement the effect of Shadow Clone here
 
-def low_impact_effect():
+def low_impact_effect(ball):
         print("Low impact activated!")
-        # Implement the effect of Low impact here
-
-def high_impact_effect():
-        print("High impact activated!")
-        # Implement the effect of High impact here
-def shrink_effect():
-        print("Shrink activated!")
-        # Implement the effect of Shrink here
-
-# cards = [
-#         Card("Arc Strike", arc_strike_effect), #cards[0]
-#         Card("Bigger is better", bigger_is_better_effect), #cards[1]
-#         Card("Bring it back", bring_it_back_effect), #cards[2]
-#         Card("Shadow Clone", shadow_clone_effect), #cards[3]
-#         Card("Low impact", low_impact_effect), #cards[4]
-#         Card("High impact", high_impact_effect), #cards[5]
-#         Card("Shrink", shrink_effect) #cards[6]
-#         ]
-
-# card_count = 0
-
-
-# def draw_random_card(num = 3):
-#    selected_cards = random.sample(cards, num)
-#    global card_count
-#    print("These are your available cards!")
-#    for card in selected_cards:
-#         print(f"Drawn card: {card.name}")
-#    while card_count == 0:
-#         card_name_choice = input("Which card would you like: ")
-#         for card in selected_cards:
-#             if card.name.lower() == card_name_choice.lower():
-#                 print(f"Selected card: {card.name}")
-#                 card_count += 1
-#                 return card
-#                 break
-#         else:
-#             print("That card is not in the deck, please enter another one: ")
+        #Returning smash
     
-# hand = draw_random_card()
+
+def high_impact_effect(ball):
+        print("High impact activated!")
+        #if Smash1_active or Smash2_active:
+            #pass #Ball smash speed goes up by 1.5
+
+def shrink_effect(ball):
+        import ball
+        print("Shrink activated!")
+        ball.radius = max(4, ball.radius - 4)
+        ball.impulse((2,0,2))
+
+
+chosen_card = None
+
+cards = [
+          Card("Arc Strike", arc_strike_effect), #cards[0]
+          Card("Bigger is better", bigger_is_better_effect), #cards[1]
+          Card("Bring it back", bring_it_back_effect), #cards[2]
+          #Card("Shadow Clone", shadow_clone_effect), #cards[3]
+          Card("Low impact", low_impact_effect), #cards[4]
+          Card("High impact", high_impact_effect), #cards[5]
+          Card("Shrink", shrink_effect) #cards[6]
+]
+card_count = 0
+
+
+def draw_random_card(screen, font, num=3):
+    selected_cards = random.sample(cards, num)
+
+    card_width = 200
+    card_height = 120
+    spacing = 50
+    transparency = 180
+
+    screen_width = screen.get_width()
+    screen_height = screen.get_height()
+
+    start_x = (screen_width - ((card_width * num) + spacing * (num - 1))) // 2
+    y_pos = screen_height // 2 - card_height // 2
+
+    card_rects = []
+    current_screen = screen.copy()
+
+    running = True
+    while running:
+        #screen.fill((30, 30, 30))
+        screen.blit(current_screen, (0, 0))
+
+        overlay = pg.Surface((screen_width, screen_height), pg.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))  # Semi-transparent overlay
+        screen.blit(overlay, (0, 0))
+
+        # Draw cards
+        for i, card in enumerate(selected_cards):
+            rect = pg.Rect(start_x + i * (card_width + spacing), y_pos, card_width, card_height)
+            card_rects.append(rect)
+            card_surface = pg.Surface((card_width, card_height), pg.SRCALPHA)
+
+            card_surface.fill((0,0,0,0))
+
+            pg.draw.rect(card_surface, (200, 200, 200, transparency), card_surface.get_rect(), border_radius= 10)
+            pg.draw.rect(card_surface, (0, 0, 0, transparency), card_surface.get_rect(), 3, border_radius=10)
+
+            text_surface = font.render(card.name, True, (0, 0, 0))
+            text_rect = text_surface.get_rect(center=card_surface.get_rect().center)
+            card_surface.blit(text_surface, text_rect)
+            screen.blit(card_surface, rect)
+
+        pg.display.flip()
+
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                return None
+
+            if event.type == pg.MOUSEBUTTONDOWN:
+                mouse_pos = pg.mouse.get_pos()
+
+                for i, rect in enumerate(card_rects):
+                    if rect.collidepoint(mouse_pos):
+                        return selected_cards[i]

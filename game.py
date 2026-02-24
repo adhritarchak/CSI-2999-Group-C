@@ -37,12 +37,17 @@ Paddle_Height = 80
 BasePaddleSpeed = 5
 SmashPaddle1Speed = BasePaddleSpeed * 0.3
 SmashPaddle2Speed = BasePaddleSpeed * 0.3
+SmashChargeSpeed = 1.5
 Smash_start_time = 0
 Smash1_hold_time = 0
+Smash1_hit = False
+Smash1_hit_time = 0
 Smash1_active = False
 Smash2_hold_time = 0
 Smash2_active = False
 Smash_duration = 3000
+Smash2_hit = False
+Smash2_hit_time = 0
 
 # Ball Constants
 Ball_Radius = 10
@@ -58,6 +63,7 @@ Max_Speed = 10
 Bounce_MinZ = 8
 paddle_hit_boost = 1
 
+#ball_characteristics = Ball ( ball_x = Width // 2, ball_y = Height // 2, ball_vel_x = 1, ball_vel_y = 0.8, ball_height = 0, ball_vel_z = 0, ball_max_height = 25)
 
 ball_x = Width // 2
 ball_y = Height // 2
@@ -65,6 +71,7 @@ ball_vel_x = 1
 ball_vel_y = 0.8
 ball_height = 0
 ball_vel_z = 0
+
 
 
 
@@ -139,18 +146,36 @@ def draw_ball(bx, by, bheight):
     pygame.draw.circle(screen, ORANGE, (int(bx), int(ball_screen_y)), Ball_Radius)
     pygame.draw.circle(screen, WHITE, (int(bx), int(ball_screen_y)), Ball_Radius, 2)
 
-
+chosen_card = None
 # actual game
 running = True
 while running: 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_c:  # Press C to open cards
+                chosen_card = cards.draw_random_card(screen, font)
+                if chosen_card:
+                    print("You picked:", chosen_card.name)
+            if event.key == pygame.K_z and chosen_card is not None: # Press Z to activate the chosen card effect
+                    ball_data = { ##place holder
+                    'x': ball_x,
+                    'y': ball_y,
+                    'vel_x': ball_vel_x,
+                    'vel_y': ball_vel_y,
+                    'vel_z': ball_vel_z,
+                    'height': ball_height,
+                    'radius': Ball_Radius
+                         }
+                    chosen_card.activate(ball_data) ##place holder for data, once we figure out which actual ball data we need I'll make it
+                    print("Activated card effect:", chosen_card.name)
+                    chosen_card = None  # Clear the chosen card after activation
     dt = clock.tick(FPS)
     keys = pygame.key.get_pressed()
     CurrentPaddle1Speed = SmashPaddle1Speed if Smash1_active else BasePaddleSpeed
     CurrentPaddle2Speed = SmashPaddle2Speed if Smash2_active else BasePaddleSpeed       
-
+    
     # paddle 1 movement (WASD)
     if keys[pygame.K_w] and paddle1_y > Top_Boundary:
         paddle1_y -= CurrentPaddle1Speed * (dt / 16.67)
@@ -165,19 +190,31 @@ while running:
             ball_vel_x += 3 
     if keys[pygame.K_LSHIFT]: #smash
         Smash1_hold_time += dt
-    if Smash1_hold_time >= 3000 and not Smash1_active:
+        CurrentPaddle1Speed = BasePaddleSpeed * 0.5
+        if Smash1_hold_time >= 3000 and not Smash1_active:
             Smash1_active = True
             Smash1_start_time = pygame.time.get_ticks()
             CurrentPaddle1Speed = SmashPaddle1Speed
             Smash1_hit = False
-    if Smash1_active == True:
-                ball_vel_x = min(abs(ball_vel_x) + 5, Max_Speed)
-                Smash1_hit = True
-    if Smash1_active and pygame.time.get_ticks() - Smash1_start_time >= Smash_duration:
-            Smash1_active = False
-            Smash1_hold_time = 0
-            CurrentPaddle1Speed = BasePaddleSpeed 
+    if keys[pygame.K_LSHIFT] == False and Smash1_active:
+            if not Smash1_hit:
+                Smash1_active = False
+                Smash1_hold_time = 0
+                CurrentPaddle1Speed = BasePaddleSpeed
+    if Smash1_active == True and paddle1_x < ball_x < paddle1_x + 20 and paddle1_y < ball_y < paddle1_y + 80:
+        ball_vel_x = min(abs(ball_vel_x) + 5, Max_Speed)
+        Smash1_hit = True
+        CurrentPaddle1Speed = BasePaddleSpeed * 0.2
+        Smash1_hold_time = 0
+        Smash1_hit_time = pygame.time.get_ticks()
+        
+    if Smash1_hit:
+        if pygame.time.get_ticks() - Smash1_hit_time >= 2000:  # 2 seconds recovery time
+            CurrentPaddle1Speed = BasePaddleSpeed
             Smash1_hit = False
+
+    #elif Smash1_active and not (paddle1_x < ball_x < paddle1_x + 20 and paddle1_y < ball_y < paddle1_y + 80):
+       #Smash1_hit = False
 
     # paddle 2 movement (arrow keys)
     if keys[pygame.K_UP] and paddle2_y > Top_Boundary:

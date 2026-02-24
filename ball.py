@@ -12,11 +12,12 @@ class Ball:
     draw_prediction: bool = False  # whether to draw a prediction of the ball's trajectory
     ellipse_scale: tuple[float, float] = (1.8, 1.2)  # scale of the ellipse drawn at the predicted landing position (x scale, y scale)
 
-    def __init__(self, x, y, height, speed_x, speed_y, radius):
+    def __init__(self, x, y, height, speed_x, speed_y, radius, spin):
         self.__position = (x, y, height)
         self.__velocity = (speed_x, speed_y, 0)  # Vertical speed starts at 0
         self.__bounds = (0, 600, 0, 800)  # Default bounds for the ball to move in (top, bottom, left, right)
         self.radius = radius
+        self.spin = spin
 
     def get_velocity(self):
         return self.__velocity
@@ -71,10 +72,11 @@ class Ball:
             pos[HEIGHT] + vel[HEIGHT]
         )
         nextVel = (
-            vel[X],
+            vel[X] + self.spin,  
             vel[Y],
             vel[HEIGHT] - self.gravity
         )
+        self.spin *= 0.98  # Dampen spin over time
 
         if nextPos[HEIGHT] < 0:  # If the ball hits the ground
             nextPos = (nextPos[X], nextPos[Y], 0)  # Reset height to ground level
@@ -140,6 +142,6 @@ class Ball:
     def update_position(self):
         self.__position, self.__velocity = self.step_physics(self.__position, self.__velocity)
 
-ball_characteristics = Ball(x=30, y=300, height=100, speed_x=1.5, speed_y=0.2, radius=8)  # Example initialization
-ball_characteristics.draw(pg.display.set_mode((800, 600)))  # Example drawing on a Pygame screen
+#ball_characteristics = Ball(x=30, y=300, height=100, speed_x=1.5, speed_y=0.2, radius=8, spin=0.1)  # Example initialization
+#ball_characteristics.draw(pg.display.set_mode((800, 600)))  # Example drawing on a Pygame screen
 ball_initial_position = (400, 300)  # Reset ball position to center
