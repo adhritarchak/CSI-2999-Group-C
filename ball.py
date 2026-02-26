@@ -54,12 +54,14 @@ class Ball:
     ellipse_scale: tuple[float, float] = (1.8, 1.2)  # scale of the ellipse drawn at the predicted landing position (x scale, y scale)
     trailPositions: TrailQueue
     trailThickness: int = 8
+    max_velocity: float = 15
 
-    def __init__(self, x, y, height, speed_x, speed_y, radius, spin = 0):
+    def __init__(self, x, y, height, speed_x, speed_y, radius, max_velocity, spin = 0):
         self.__position = (x, y, height)
         self.__velocity = (speed_x, speed_y, 0)  # Vertical speed starts at 0
         self.__bounds = (0, 600, 0, 800)  # Default bounds for the ball to move in (top, bottom, left, right)
         self.radius = radius
+        self.max_velocity = max_velocity
         
         self.trailPositions = TrailQueue(length=50)
         self.spin = spin
@@ -77,6 +79,13 @@ class Ball:
         return self.__velocity[HEIGHT] < 0
     def xy_pos(self) -> tuple[float, float]:
         return (self.__position[X], self.__position[Y])
+    
+    def clamp_velocity(self):
+        speed_x, speed_y, speed_z = self.__velocity
+        speed = sqrt(speed_x ** 2 + speed_y ** 2)
+        if speed > self.max_velocity:
+            scale = self.max_velocity / speed
+            self.__velocity = (speed_x * scale, speed_y * scale, speed_z)
     
     def set_bounds(self, top, bottom, left, right):
         self.__bounds = (top, bottom, left, right)
@@ -223,7 +232,7 @@ class Ball:
         if self.trailPositions.length() < 2:
             return
         points = self.trailPositions.positionList()
-        trailColor = hsv_to_rgb(1 - min(self.velocityMagnitude() / MAX_VELOCITY, 1), 1, 1)
+        trailColor = hsv_to_rgb(1 - min(self.velocityMagnitude() / self.max_velocity, 1), 1, 1)
         trailColor = (
             int(trailColor[0] * 255),
             int(trailColor[1] * 255),

@@ -7,6 +7,7 @@ from colorsys import *
 # Class to work the paddles
 class PongPaddle:
     paddleSurface: pg.Surface
+    hitbox: pg.Rect
     position: tuple[float, float]
     bounds: tuple[float, float, float, float]
     speed: float
@@ -16,6 +17,7 @@ class PongPaddle:
     color: tuple[int, int, int]
     font = None
     viewDebug: bool = False
+    sprites: list[pg.Surface] = None
 
     can_swing: bool = True
     swinging: bool = False
@@ -42,20 +44,17 @@ class PongPaddle:
     smashKey: int = -1
 
     def __init__(self, width: int, height: int, color: tuple[int, int, int],
-             initialPos: tuple[float, float] = (0, 0), speed: float = 1):
-        self.paddleSurface = pg.Surface((width, height))
+             initialPos: tuple[float, float] = (0, 0), speed: float = 1, images: list[pg.Surface] = None):
+        self.sprites = images
+        self.paddleSurface = images[0]
+        self.hitbox = pg.Rect(initialPos[0], initialPos[1], width, height)
         self.color = rgb_to_hsv(*color)
-        self.fillSurface(color)
+        # self.fillSurface(color)
         self.font = pg.font.Font(None, 24)
-
         self.position = initialPos
         self.speed = speed
         self.currentSpeed = speed
         self.velocity = (0, 0)
-    
-    def fillSurface(self, color: tuple[int, int, int]):
-        self.paddleSurface.fill(color)
-        pg.draw.rect(surface=self.paddleSurface, color=WHITE, rect=self.paddleSurface.get_rect(), width=2)
     def brighten(self, amount: float) -> tuple[int, int, int]:
         '''Brightens the paddle's color by the specified amount (between 0 and 255) and returns the new color.'''
         h, s, v = self.color
@@ -67,8 +66,12 @@ class PongPaddle:
         # print(f"New RGB color: {new_color}")
         return (new_color)
 
-    def get_rect(self):
-        return self.paddleSurface.get_rect()
+    def get_hitbox(self):
+        return self.hitbox
+    def set_hitbox_pos(self, x_offset: float = 0, y_offset: float = 0):
+        x = self.position[X] + x_offset
+        y = self.position[Y] + y_offset
+        self.hitbox = pg.Rect(x, y, self.hitbox.width, self.hitbox.height)
 
     def setPosition(self, x: float, y: float):
         self.position = (x, y)
@@ -131,30 +134,29 @@ class PongPaddle:
             self.position[X] + self.velocity[X] * dt / 1000,
             self.position[Y] + self.velocity[Y] * dt / 1000
         )
+        self.set_hitbox_pos(30)
     def process_swing(self, dt: int):
         if not self.swinging:
             return
         self.swingTimer += dt
         if self.swingTimer <= self.swingBackTime // 2:
-            pass # Stay on frame 2
+            self.paddleSurface = self.sprites[1] # Advance to frame 2
         elif self.swingTimer > self.swingBackTime // 2 and self.swingTimer <= self.swingBackTime:
-            pass # Advance to frame 3
+            self.paddleSurface = self.sprites[2] # Advance to frame 3
         else:
             self.swing_forward(self.swingTimer - self.swingBackTime)
         
     def swing_forward(self, timer: int):
         if timer <= self.swingForwardTime / 4:
             self.can_hit_ball = not self.has_hit_ball
-            self.fillSurface(self.brighten(50)) # Brighten the paddle when the hitbox is active
-            # Advance to frame 4 and activate the hitbox
+            self.paddleSurface = self.sprites[3] # Advance to frame 4
         elif timer > self.swingForwardTime / 4 and timer <= self.swingForwardTime / 2:
-            pass # Advance to frame 5
+            self.paddleSurface = self.sprites[4] # Advance to frame 5
         elif timer > self.swingForwardTime / 2 and timer <= self.swingForwardTime * 3 / 4:
             self.can_hit_ball = False 
-            self.paddleSurface.fill(self.brighten(0)) # Reset color after swing
-            # Advance to frame 6 and deactivate the hitbox
+            self.paddleSurface = self.sprites[5] # Advance to frame 6 and deactivate the hitbox
         elif timer > self.swingForwardTime * 3 / 4 and timer <= self.swingForwardTime:
-            pass # Advance to frame 7
+            self.paddleSurface = self.sprites[6] # Advance to frame 7
         elif timer > self.swingForwardTime:
             self.swinging = False
             self.smash_swinging = False
@@ -164,7 +166,7 @@ class PongPaddle:
             self.smashPower = 0
             self.currentSpeed = self.speed
             self.has_hit_ball = False
-                # Return to frame 1
+            self.paddleSurface = self.sprites[0] # Reset to frame 1
 
     def process_smash(self, dt: int):
         if not self.smash_charging:
@@ -183,16 +185,17 @@ class PongPaddle:
         self.smashTimer += dt
         if self.smashTimer < self.smashHoldTime:
             self.currentSpeed = self.speed * 0.5
-            self.fillSurface(self.brighten(25)) # Brighten the paddle while charging the smash
-            # advance to frame 2
+            # self.fillSurface(self.brighten(25)) # Brighten the paddle while charging the smash
+            self.paddleSurface = self.sprites[1]
         else:
             self.currentSpeed = self.speed * 0.2
-            self.fillSurface(self.brighten(50)) # Brighten the paddle more when the smash is fully charged
-            # advance to frame 3
+            # self.fillSurface(self.brighten(50)) # Brighten the paddle more when the smash is fully charged
+            self.paddleSurface = self.sprites[2]
 
     def draw(self, screen: pg.Surface):
         screen.blit(self.paddleSurface, self.position)
         if self.viewDebug:
+            pg.draw.rect(screen, WHITE, self.hitbox, 2)
             text = self.font.render(f"smashTimer: {int(self.smashTimer)}ms", True, WHITE)
             screen.blit(text, (self.position[X], self.position[Y] + 30))
             text = self.font.render(f"swingTimer: {int(self.swingTimer)}ms", True, WHITE)
