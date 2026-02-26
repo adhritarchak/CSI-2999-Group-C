@@ -55,8 +55,11 @@ paddle2 = PongPaddle(width=paddleConfig['Paddle_Width'], height=paddleConfig['Pa
 paddle1.setBounds(Top_Boundary, Bot_Boundary, Left_Boundary, Right_Boundary)
 paddle2.setBounds(Top_Boundary, Bot_Boundary, Left_Boundary, Right_Boundary)
 
-paddle1.setKeys(pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d)
-paddle2.setKeys(pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT)
+paddle1.setKeys(pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_q, pygame.K_e)
+paddle2.setKeys(pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_COMMA, pygame.K_PERIOD)
+
+paddle1.setSwingConfig(paddleConfig['SwingBackTime'], paddleConfig['SwingForwardTime'], paddleConfig['SmashHoldtime'], paddleConfig['CooldownTime'])
+paddle2.setSwingConfig(paddleConfig['SwingBackTime'], paddleConfig['SwingForwardTime'], paddleConfig['SmashHoldtime'], paddleConfig['CooldownTime'])
 
 def draw_table():
     # Background
@@ -88,6 +91,10 @@ ball = Ball(x=ballConfig['init_x'], y=ballConfig['init_y'], height=ballConfig['i
              speed_x=ballConfig['init_vel_x'], speed_y=ballConfig['init_vel_y'], radius=ballConfig['Radius'])
 ball.set_bounds(top=Top_Boundary, bottom=Bot_Boundary, left=Left_Boundary, right=Right_Boundary)
 
+ball.do_draw_prediction(screenConfig['View_Debug'])
+paddle1.viewDebugInfo(screenConfig['View_Debug'])
+paddle2.viewDebugInfo(screenConfig['View_Debug'])
+
 # actual game
 running = True
 while running: 
@@ -113,6 +120,7 @@ while running:
                     chosen_card.activate(data=ball_data) # place holder for data, once we figure out which actual ball data we need I'll make it
                     print("Activated card effect:", chosen_card.name)
                     chosen_card = None  # Clear the chosen card after activation
+                    
     dt = clock.tick(screenConfig['FPS'])
     keys = pygame.key.get_pressed()
 
@@ -125,41 +133,21 @@ while running:
     paddle1.process_smash(dt)
     paddle2.process_smash(dt)
 
-    if ball.height() < 100 and ball.within_rect(paddle1.get_rect(), paddle1.position) \
-    and ball.heightVelo() < 0 and paddle1.can_hit_ball:
+    if ball.within_rect(paddle1.get_rect(), paddle1.position) and paddle1.can_hit_ball:
         ball.bounce(1, paddle1.swingAngle)
-        ball.impulse((paddle1.velocity[X] * 0.5, paddle1.velocity[Y] * 0.5))
-    if ball.height() < 100 and ball.within_rect(paddle2.get_rect(), paddle2.position) \
-    and ball.heightVelo() < 0 and paddle2.can_hit_ball:
+        ball.impulse((paddle1.velocity[X] * 0.01 * dt / 1000, paddle1.velocity[Y] * 0.1 * dt / 1000))
+        ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
+        paddle1.has_hit_ball = True # Prevent multiple hits in one swing
+    if ball.within_rect(paddle2.get_rect(), paddle2.position) and paddle2.can_hit_ball:
         ball.bounce(-1, paddle2.swingAngle)
-        ball.impulse((paddle2.velocity[X] * 0.5, paddle2.velocity[Y] * 0.5))      
-    
-    
-    #elif Smash1_active and not (paddle1_x < ballConfig['init_x'] < paddle1_x + 20 and paddle1_y < ballConfig['init_y'] < paddle1_y + 80):
-       #Smash1_hit = False
-
-    # paddle 2 movement (arrow keys)
-    if keys[pygame.K_RETURN]: # regular
-        if paddle2_x < ballConfig['init_x'] < paddle2_x + 20 and paddle2_y < ballConfig['init_y'] < paddle2_y + 80:
-            ballConfig['init_vel_x'] -= 3 
-    if keys[pygame.K_RSHIFT]: #smash
-        Smash2_hold_time += dt
-    if Smash2_hold_time >= 3000 and not Smash2_active:
-            Smash2_active = True
-            Smash2_start_time = pygame.time.get_ticks()
-            CurrentPaddle2Speed = paddleConfig['SmashPaddle2Speed']
-            Smash2_hit = False
-    if Smash2_active == True:
-            if paddle2_x < ballConfig['init_x'] < paddle2_x + 20 and paddle2_y < ballConfig['init_y'] < paddle2_y + 80:
-                ballConfig['init_vel_x'] += 5
-                Smash2_hit = True
-    if Smash2_active and pygame.time.get_ticks() - Smash2_start_time >= Smash_duration:
-            Smash2_active = False
-            Smash2_hold_time = 0
-            CurrentPaddle2Speed = paddleConfig['BasePaddleSpeed'] 
-            Smash2_hit = False
+        ball.impulse((paddle2.velocity[X] * 0.01 * dt / 1000, paddle2.velocity[Y] * 0.1 * dt / 1000))
+        ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
+        paddle2.has_hit_ball = True # Prevent multiple hits in one swing
 
     draw_table()
+
+    paddle1.draw(screen=screen)
+    paddle2.draw(screen=screen)
 
     ball.draw(screen=screen)
     pygame.display.flip()

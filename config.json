@@ -4,7 +4,8 @@
         "Height": 600, 
         "FPS": 60, 
         "Caption": "Supreme Pong", 
-        "font": ["timesnewroman", 36]
+        "font": ["timesnewroman", 36],
+        "View_Debug": true
     }, 
     "Table Layout": {
         "Table_Margin": 80, 
@@ -16,11 +17,12 @@
         "Paddle_Boost": 1.4, 
         "Paddle_Width": 20, 
         "Paddle_Height": 80, 
-        "BasePaddleSpeed": 5, 
-        "SmashPaddle1Speed": 1.5, 
-        "SmashPaddle2Speed": 1.5, 
-        "SmashChargeSpeed": 1.5, 
-        "Smash_start_time": 0
+        "BasePaddleSpeed": 400, 
+        "SmashChargeSpeedMult": 0.5, 
+        "SwingBackTime": 200, 
+        "SwingForwardTime": 800,
+        "SmashHoldtime": 3000,
+        "CooldownTime": 500
     }, 
     "Ball Physics": {
         "Radius": 8, 
@@ -29,11 +31,11 @@
         "BounceSpeedLost": 0.85, 
         "Max_Speed": 10, 
         "Bounce_MinZ": 8, 
-        "paddle_hit_boost": 1, 
+        "paddle_hit_boost": 1.5, 
         "init_x": 500, 
         "init_y": 300, 
-        "init_height": 0, 
-        "init_vel_x": 1, 
+        "init_height": 50, 
+        "init_vel_x": 1.5, 
         "init_vel_y": 0.8, 
         "init_vel_z": 0
     }, 

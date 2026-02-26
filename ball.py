@@ -55,7 +55,7 @@ class Ball:
     trailPositions: TrailQueue
     trailThickness: int = 8
 
-    def __init__(self, x, y, height, speed_x, speed_y, radius, spin):
+    def __init__(self, x, y, height, speed_x, speed_y, radius, spin = 0):
         self.__position = (x, y, height)
         self.__velocity = (speed_x, speed_y, 0)  # Vertical speed starts at 0
         self.__bounds = (0, 600, 0, 800)  # Default bounds for the ball to move in (top, bottom, left, right)
@@ -123,7 +123,7 @@ class Ball:
         self.__velocity = (
             self.__velocity[X] - 2 * dot_product * normal_x,
             self.__velocity[Y] - 2 * dot_product * normal_y,
-            -self.__velocity[HEIGHT]
+            abs(self.__velocity[HEIGHT]) - (self.gravity * 2)
         )
         self.trailPositions.clear()
     def multiplyVelocity(self, value: float):
