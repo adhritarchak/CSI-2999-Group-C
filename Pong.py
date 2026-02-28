@@ -2,10 +2,206 @@ import pygame as pg
 from Enums import *
 from ball import *
 from cards import *
+from colorsys import *
 
 # Class to work the paddles
 class PongPaddle:
-    pass
+    paddleSurface: pg.Surface
+    hitbox: pg.Rect
+    position: tuple[float, float]
+    bounds: tuple[float, float, float, float]
+    speed: float
+    currentSpeed: float
+    velocity: tuple[float, float]
+
+    color: tuple[int, int, int]
+    font = None
+    viewDebug: bool = False
+    sprites: list[pg.Surface] = None
+
+    can_swing: bool = True
+    swinging: bool = False
+    can_hit_ball: bool = False
+    has_hit_ball: bool = False
+    swingTimer: int = 0
+    swingBackTime: int = 200
+    swingForwardTime: int = 800
+    swingAngle: float = 0
+
+    smash_charging: bool = False
+    smash_swinging: bool = False
+    smashTimer: int = 0
+    smashHoldTime: int = 3000
+    cooldownTime: int = 2000
+    cooldownTimer: int = 0
+    smashPower: float = 0
+
+    upKey: int = -1
+    downKey: int = -1
+    leftKey: int = -1
+    rightKey: int = -1
+    swingKey: int = -1
+    smashKey: int = -1
+
+    def __init__(self, width: int, height: int, color: tuple[int, int, int],
+             initialPos: tuple[float, float] = (0, 0), speed: float = 1, images: list[pg.Surface] = None):
+        self.sprites = images
+        self.paddleSurface = images[0]
+        self.hitbox = pg.Rect(initialPos[0], initialPos[1], width, height)
+        self.color = rgb_to_hsv(*color)
+        # self.fillSurface(color)
+        self.font = pg.font.Font(None, 24)
+        self.position = initialPos
+        self.speed = speed
+        self.currentSpeed = speed
+        self.velocity = (0, 0)
+    def brighten(self, amount: float) -> tuple[int, int, int]:
+        '''Brightens the paddle's color by the specified amount (between 0 and 255) and returns the new color.'''
+        h, s, v = self.color
+        s = min(1, s - amount / 255)
+        v = min(255, v + amount)
+        # print(f"Brightening color from {self.color} to {(h, s, v)}")
+        new_color = hsv_to_rgb(h, s, v)
+        new_color = (int(new_color[0]), int(new_color[1]), int(new_color[2]))
+        # print(f"New RGB color: {new_color}")
+        return (new_color)
+
+    def get_hitbox(self):
+        return self.hitbox
+    def set_hitbox_pos(self, x_offset: float = 0, y_offset: float = 0):
+        x = self.position[X] + x_offset
+        y = self.position[Y] + y_offset
+        self.hitbox = pg.Rect(x, y, self.hitbox.width, self.hitbox.height)
+
+    def setPosition(self, x: float, y: float):
+        self.position = (x, y)
+    def setBounds(self, topBound: float, botBound: float, leftBound: float, rightBound: float):
+        self.bounds = (
+            topBound,
+            botBound,
+            leftBound,
+            rightBound
+        )
+    def setKeys(self, upKey: int = -1, downKey: int = -1, leftKey: int = -1, rightKey: int = -1, swingKey: int = -1, smashKey: int = -1):
+        self.upKey = upKey
+        self.downKey = downKey
+        self.leftKey = leftKey
+        self.rightKey = rightKey
+        self.swingKey = swingKey
+        self.smashKey = smashKey
+    def setSwingConfig(self, swingBackTime: int, swingForwardTime: int, smashHoldTime: int, cooldownTime: int):
+        self.swingBackTime = swingBackTime
+        self.swingForwardTime = swingForwardTime
+        self.smashHoldTime = smashHoldTime
+        self.cooldownTime = cooldownTime
+    def viewDebugInfo(self, view: bool):
+        self.viewDebug = view
+
+    def process_keys(self, keyList, dt: int):
+        move_x = 0
+        move_y = 0
+        if self.upKey >= 0:
+            if keyList[self.upKey] and self.position[Y] > self.bounds[TOP]:
+                move_y -= 1
+        if self.downKey >= 0:
+            if keyList[self.downKey] and self.position[Y] < self.bounds[BOTTOM]:
+                move_y += 1
+        if self.leftKey >= 0:
+            if keyList[self.leftKey] and self.position[X] > self.bounds[LEFT]:
+                move_x -= 1
+        if self.rightKey >= 0:
+            if keyList[self.rightKey] and self.position[X] < self.bounds[RIGHT]:
+                move_x += 1
+        if self.cooldownTimer > 0:
+            self.cooldownTimer -= dt
+        else:
+            self.can_swing = True
+            self.cooldownTimer = 0
+        if keyList[self.swingKey] and self.can_swing: # regular
+            self.swinging = True
+            self.can_swing = False
+        if keyList[self.smashKey] and self.can_swing: #smash
+            self.smash_charging = True
+            self.can_swing = False
+        if self.smash_charging and not keyList[self.smashKey]: #end smash
+            self.smash_charging = False
+
+        self.velocity = (
+            move_x * self.currentSpeed,
+            move_y * self.currentSpeed
+        )
+        self.position = (
+            self.position[X] + self.velocity[X] * dt / 1000,
+            self.position[Y] + self.velocity[Y] * dt / 1000
+        )
+        self.set_hitbox_pos(30)
+    def process_swing(self, dt: int):
+        if not self.swinging:
+            return
+        self.swingTimer += dt
+        if self.swingTimer <= self.swingBackTime // 2:
+            self.paddleSurface = self.sprites[1] # Advance to frame 2
+        elif self.swingTimer > self.swingBackTime // 2 and self.swingTimer <= self.swingBackTime:
+            self.paddleSurface = self.sprites[2] # Advance to frame 3
+        else:
+            self.swing_forward(self.swingTimer - self.swingBackTime)
+        
+    def swing_forward(self, timer: int):
+        if timer <= self.swingForwardTime / 4:
+            self.can_hit_ball = not self.has_hit_ball
+            self.paddleSurface = self.sprites[3] # Advance to frame 4
+        elif timer > self.swingForwardTime / 4 and timer <= self.swingForwardTime / 2:
+            self.paddleSurface = self.sprites[4] # Advance to frame 5
+        elif timer > self.swingForwardTime / 2 and timer <= self.swingForwardTime * 3 / 4:
+            self.can_hit_ball = False 
+            self.paddleSurface = self.sprites[5] # Advance to frame 6 and deactivate the hitbox
+        elif timer > self.swingForwardTime * 3 / 4 and timer <= self.swingForwardTime:
+            self.paddleSurface = self.sprites[6] # Advance to frame 7
+        elif timer > self.swingForwardTime:
+            self.swinging = False
+            self.smash_swinging = False
+            self.cooldownTimer = self.cooldownTime
+            self.swingTimer = 0
+            self.smashTimer = 0
+            self.smashPower = 0
+            self.currentSpeed = self.speed
+            self.has_hit_ball = False
+            self.paddleSurface = self.sprites[0] # Reset to frame 1
+
+    def process_smash(self, dt: int):
+        if not self.smash_charging:
+            if self.smash_swinging:
+                self.smashTimer += dt
+                self.swing_forward(self.smashTimer)
+                return
+            elif self.smashTimer > 0:
+                self.smashPower = min(self.smashTimer / self.smashHoldTime, 1)
+                self.smashTimer = 0
+                self.smash_swinging = True
+                self.swing_forward(self.smashTimer)
+                return
+            else:
+                return
+        self.smashTimer += dt
+        if self.smashTimer < self.smashHoldTime:
+            self.currentSpeed = self.speed * 0.5
+            # self.fillSurface(self.brighten(25)) # Brighten the paddle while charging the smash
+            self.paddleSurface = self.sprites[1]
+        else:
+            self.currentSpeed = self.speed * 0.2
+            # self.fillSurface(self.brighten(50)) # Brighten the paddle more when the smash is fully charged
+            self.paddleSurface = self.sprites[2]
+
+    def draw(self, screen: pg.Surface):
+        screen.blit(self.paddleSurface, self.position)
+        if self.viewDebug:
+            pg.draw.rect(screen, WHITE, self.hitbox, 2)
+            text = self.font.render(f"smashTimer: {int(self.smashTimer)}ms", True, WHITE)
+            screen.blit(text, (self.position[X], self.position[Y] + 30))
+            text = self.font.render(f"swingTimer: {int(self.swingTimer)}ms", True, WHITE)
+            screen.blit(text, (self.position[X], self.position[Y] + 50))
+            text = self.font.render(f"cooldown: {self.cooldownTimer}", True, WHITE)
+            screen.blit(text, (self.position[X], self.position[Y] + 70))
 
 # Class to handle the players in the game
 class PongPlayer:
