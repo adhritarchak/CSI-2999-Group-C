@@ -104,37 +104,46 @@ class PongPaddle:
             if keyList[self.upKey] and self.position[Y] > self.bounds[TOP]:
                 move_y -= 1
         if self.downKey >= 0:
-            if keyList[self.downKey] and self.position[Y] < self.bounds[BOTTOM]:
+            if keyList[self.downKey] and self.position[Y] + self.hitbox.height < self.bounds[BOTTOM]:
                 move_y += 1
         if self.leftKey >= 0:
             if keyList[self.leftKey] and self.position[X] > self.bounds[LEFT]:
                 move_x -= 1
         if self.rightKey >= 0:
-            if keyList[self.rightKey] and self.position[X] < self.bounds[RIGHT]:
+            if keyList[self.rightKey] and self.position[X] + self.hitbox.width < self.bounds[RIGHT]:
                 move_x += 1
         if self.cooldownTimer > 0:
             self.cooldownTimer -= dt
         else:
             self.can_swing = True
             self.cooldownTimer = 0
-        if keyList[self.swingKey] and self.can_swing: # regular
+        if self.swingKey >= 0 and keyList[self.swingKey] and self.can_swing:
             self.swinging = True
             self.can_swing = False
-        if keyList[self.smashKey] and self.can_swing: #smash
+        if self.smashKey >= 0 and keyList[self.smashKey] and self.can_swing:
             self.smash_charging = True
             self.can_swing = False
-        if self.smash_charging and not keyList[self.smashKey]: #end smash
+        if self.smashKey >= 0 and self.smash_charging and not keyList[self.smashKey]:
             self.smash_charging = False
+
 
         self.velocity = (
             move_x * self.currentSpeed,
             move_y * self.currentSpeed
         )
-        self.position = (
-            self.position[X] + self.velocity[X] * dt / 1000,
-            self.position[Y] + self.velocity[Y] * dt / 1000
-        )
-        self.set_hitbox_pos(30)
+        new_x = self.position[X] + self.velocity[X] * dt / 1000
+        new_y = self.position[Y] + self.velocity[Y] * dt / 1000
+
+        new_x = max(self.bounds[LEFT], min(new_x, self.bounds[RIGHT] - self.hitbox.width))
+        new_y = max(self.bounds[TOP], min(new_y, self.bounds[BOTTOM] - self.hitbox.height))
+
+        self.position = (new_x, new_y)
+        #self.position = (
+            #self.position[X] + self.velocity[X] * dt / 1000,
+            #self.position[Y] + self.velocity[Y] * dt / 1000
+        #)
+        self.set_hitbox_pos(self.paddleSurface.get_width() - self.hitbox.width, 0)
+        #self.set_hitbox_pos(30)
     def process_swing(self, dt: int):
         if not self.swinging:
             return
@@ -168,6 +177,21 @@ class PongPaddle:
             self.has_hit_ball = False
             self.paddleSurface = self.sprites[0] # Reset to frame 1
 
+    #def process_smash(self, dt: int):
+        #if not self.smash_charging:
+            #if self.smash_swinging:
+                #self.smashTimer += dt
+                #self.swing_forward(self.smashTimer)
+                #return
+            #elif self.smashTimer > 0:
+                #self.smashPower = min(self.smashTimer / self.smashHoldTime, 1)
+                #self.smashTimer = 0
+                #self.smash_swinging = True
+                #self.swing_forward(self.smashTimer)
+                #return
+            #else:
+                #return
+        #self.smashTimer += dt
     def process_smash(self, dt: int):
         if not self.smash_charging:
             if self.smash_swinging:
@@ -175,22 +199,31 @@ class PongPaddle:
                 self.swing_forward(self.smashTimer)
                 return
             elif self.smashTimer > 0:
-                self.smashPower = min(self.smashTimer / self.smashHoldTime, 1)
+                if self.smashTimer >= self.smashHoldTime:
+                    self.smashPower = min(self.smashTimer / self.smashHoldTime, 1)
+                    self.smash_swinging = True
+                    self.swing_forward(0)
+                else:
+                    self.currentSpeed = self.speed
+                    self.can_swing = True
+                    self.cooldownTimer = 0
+                    self.paddleSurface = self.sprites[0]  
                 self.smashTimer = 0
-                self.smash_swinging = True
-                self.swing_forward(self.smashTimer)
-                return
+                return  
             else:
                 return
+
+        # Still charging
         self.smashTimer += dt
-        if self.smashTimer < self.smashHoldTime:
+        charge_progress = self.smashTimer / self.smashHoldTime  
+
+        if charge_progress < 1.0:
+            sprite_index = int(charge_progress * 3) + 1  
             self.currentSpeed = self.speed * 0.5
-            # self.fillSurface(self.brighten(25)) # Brighten the paddle while charging the smash
-            self.paddleSurface = self.sprites[1]
+            self.paddleSurface = self.sprites[sprite_index]
         else:
             self.currentSpeed = self.speed * 0.2
-            # self.fillSurface(self.brighten(50)) # Brighten the paddle more when the smash is fully charged
-            self.paddleSurface = self.sprites[2]
+            self.paddleSurface = self.sprites[3]
 
     def draw(self, screen: pg.Surface):
         screen.blit(self.paddleSurface, self.position)
