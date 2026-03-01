@@ -117,6 +117,8 @@ class PongPaddle:
         else:
             self.can_swing = True
             self.cooldownTimer = 0
+            if not self.smash_charging and not self.smash_swinging:
+                self.currentSpeed = self.speed
         if self.swingKey >= 0 and keyList[self.swingKey] and self.can_swing:
             self.swinging = True
             self.can_swing = False
@@ -172,26 +174,13 @@ class PongPaddle:
             self.cooldownTimer = self.cooldownTime
             self.swingTimer = 0
             self.smashTimer = 0
+            if self.smashPower > 0:
+                self.currentSpeed = self.speed * 0.3
             self.smashPower = 0
-            self.currentSpeed = self.speed
             self.has_hit_ball = False
             self.paddleSurface = self.sprites[0] # Reset to frame 1
 
-    #def process_smash(self, dt: int):
-        #if not self.smash_charging:
-            #if self.smash_swinging:
-                #self.smashTimer += dt
-                #self.swing_forward(self.smashTimer)
-                #return
-            #elif self.smashTimer > 0:
-                #self.smashPower = min(self.smashTimer / self.smashHoldTime, 1)
-                #self.smashTimer = 0
-                #self.smash_swinging = True
-                #self.swing_forward(self.smashTimer)
-                #return
-            #else:
-                #return
-        #self.smashTimer += dt
+    
     def process_smash(self, dt: int):
         if not self.smash_charging:
             if self.smash_swinging:
