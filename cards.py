@@ -4,24 +4,28 @@ import pygame as pg
 import random
 from Enums import *
 from ball import Ball
+import ball
 
 class Card:
     '''The class containing card data.'''
     name: str
     type: CardTypes     # Specifies card type. I dunno if we need it yet, but it's probably not bad to have.
+    effect_fn: callable
     effects: list[str]  # A list of effects to activate when the card is used, activated by getattr(). 
 
-    def __init__(self, name = "Card", cardType = CardTypes.Typeless):
+    def __init__(self, name = "Card", effect_fn = None, cardType = CardTypes.Typeless):
         self.name = name
         self.type = cardType
+        self.effect_fn = effect_fn
         self.effects = []
 
-    def activate(self, caller: object = None, data: dict = None):
+    def activate(self, **kwargs):
         '''The function to call when the card is used, which activates all of its effects. The caller parameter 
         is the object that will call the effects.'''
-        if caller is None: caller = self
-        for effect in self.effects:
-            getattr(caller, effect)(data[effect])  # Pass data to each effect function
+        if self.effect_fn:
+            self.effect_fn(**kwargs)
+        #for effect in self.effects:
+            #getattr(caller, effect)(data[effect])  # Pass data to each effect function
 
 class Deck:
     '''Stack for cards, has both a draw and discard pile for the cards.'''
@@ -101,41 +105,87 @@ def loadDeck(pathname: str) -> Deck:
 def set_velocity(self, vx, vy, vz):
     Ball.set_velocity((vx, vy, vz))
         
-def arc_strike_effect(ball):
+def arc_strike_effect(ball, **kwargs):
         print("Arc Strike activated!")
-        ball.impulse((4,0,6))
+        vel = ball.get_velocity()
+        #current_spin = ball.spin if hasattr(ball, 'spin') else 0
+        if vel[X] > 0:                  # ball moving right, paddle1 last hit it
+            ball.spin = 0.15             # curve right
+        else:                           # ball moving left, paddle2 last hit it
+            ball.spin = -0.15            # curve left
 
 
-def bigger_is_better_effect(ball, game):
+def bigger_is_better_effect(paddle1, paddle2, **kwargs):
         print("Bigger is better activated!")
-        game.paddle1.radius += 5
-        game.paddle2.radius += 5
-        
+        paddle1.hitbox.width = int(paddle1.hitbox.width * 1.5)
+        paddle1.hitbox.height = int(paddle1.hitbox.height * 1.5)
+        paddle2.hitbox.width = int(paddle2.hitbox.width * 1.5)
+        paddle2.hitbox.height = int(paddle2.hitbox.height * 1.5)
+            
 
-def bring_it_back_effect(ball):
+def bring_it_back_effect(ball, paddle1, paddle2, **kwargs):
         print("Bring it back activated!")
-        vx, vy, vz = ball.get_velocity()
-        ball.set_velocity(-vx, -vy, vz)
+        vel = ball.get_velocity()
+        ball.set_velocity(-vel[X], vel[Y], vel[2])
+        #pos = ball.get_position()
 
-def shadow_clone_effect(ball):
+        #if vel[X] > 0:
+            #target_x = paddle1.hitbox.centerx
+            #direction = -1  
+        #else:
+            #target_x = paddle2.hitbox.centerx
+            #direction = 1
+        #dx = abs(target_x - pos[0])
+        #dy = paddle1.hitbox.centery - pos[1] if direction == -1 else paddle2.hitbox.centery - pos[1]
+
+        # Set velocity directly towards the target paddle
+        #speed = max(abs(vel[X]), ball.max_speed * 0.5)  # minimum speed
+        #angle = dy / dx if dx != 0 else 0               # rise over run
+        #ball._Ball__velocity = (
+            #direction * speed,
+            #angle * speed,                               # aim at paddle height
+            #vel[2]
+       # )
+
+def shadow_clone_effect(ball, shadow_balls, **kwargs):
         print("Shadow Clone activated!")
-        # Implement the effect of Shadow Clone here
+        vel = ball.get_velocity()
+        pos = ball.get_position()
+        bounds = ball.get_bounds()
+        print("Shadow Clone activated!")
+        print(f"shadow_balls before: {len(shadow_balls)}")
+    # Create a shadow ball with slight drift
+        shadow = Ball(
+        x=pos[0], y=pos[1],
+        height=ball.get_height(),
+        vel_z=vel[2],
+        speed_x=vel[0],
+        speed_y=vel[1] + 3,  # slight drift
+        radius=ball.radius,
+        spin=ball.spin,
+        chosen_card=None,
+        max_speed=ball.max_speed
+    )
+        shadow.set_bounds(top=bounds[0], bottom=bounds[1], left=bounds[2],right=bounds[3] )
+        shadow.is_shadow = True  # Mark as fake
+        shadow_balls.append(shadow)
+        print(f"After: {len(shadow_balls)} shadows")
 
-def low_impact_effect(ball):
+def low_impact_effect(ball, **kwargs):
         print("Low impact activated!")
-        #Returning smash
+        vel = ball.get_velocity()
+        ball.impulse((vel[0] * 0.5, 0, 0))
     
 
-def high_impact_effect(ball):
+def high_impact_effect(ball, paddle1, paddle2, **kwargs):
         print("High impact activated!")
         #if Smash1_active or Smash2_active:
-            #pass #Ball smash speed goes up by 1.5
+        paddle1.smashPower = min(paddle1.smashPower * 1.5, 1.0)
+        paddle2.smashPower = min(paddle2.smashPower * 1.5, 1.0)
 
-def shrink_effect(ball):
-        import ball
+def shrink_effect(ball, **kwargs):
         print("Shrink activated!")
-        ball.radius = max(4, ball.radius - 4)
-        ball.impulse((2,0,2))
+        ball.radius = max(4, ball.radius - 3)
 
 
 chosen_card = None
@@ -144,7 +194,7 @@ cards = [
           Card("Arc Strike", arc_strike_effect), #cards[0]
           Card("Bigger is better", bigger_is_better_effect), #cards[1]
           Card("Bring it back", bring_it_back_effect), #cards[2]
-          #Card("Shadow Clone", shadow_clone_effect), #cards[3]
+          Card("Shadow Clone", shadow_clone_effect), #cards[3]
           Card("Low impact", low_impact_effect), #cards[4]
           Card("High impact", high_impact_effect), #cards[5]
           Card("Shrink", shrink_effect) #cards[6]

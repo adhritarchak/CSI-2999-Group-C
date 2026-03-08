@@ -26,6 +26,8 @@ class Ball:
 
     def get_velocity(self):
         return self.__velocity
+    def set_velocity(self, vx, vy, vz):
+        self.__velocity = (vx, vy, vz)
     
     def get_height(self):
         return self.__position[HEIGHT]
@@ -81,11 +83,10 @@ class Ball:
             pos[HEIGHT] + vel[HEIGHT]
         )
         nextVel = (
-            vel[X] + self.spin,  
-            vel[Y],
+            vel[X],
+            vel[Y] + self.spin,
             vel[HEIGHT] - self.gravity
         )
-        self.spin *= 0.98  # Dampen spin over time
 
         if nextPos[HEIGHT] < 0:  # If the ball hits the ground
             nextPos = (nextPos[X], nextPos[Y], 0)  # Reset height to ground level
@@ -173,7 +174,10 @@ class Ball:
             )
     def get_position(self):
         return (self.__position[X], self.__position[Y] - self.__position[HEIGHT])    
+    def get_bounds(self):
+        return self.__bounds
     def update_position(self):
         self.__position, self.__velocity = self.step_physics(self.__position, self.__velocity)
+        self.spin *= 0.99  # Dampen spin over time
 
 ball_initial_position = (400, 300)  # Reset ball position to center

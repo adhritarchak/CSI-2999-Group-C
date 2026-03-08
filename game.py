@@ -107,6 +107,8 @@ ball.do_draw_prediction(screenConfig['View_Debug'])
 paddle1.viewDebugInfo(screenConfig['View_Debug'])
 paddle2.viewDebugInfo(screenConfig['View_Debug'])
 
+shadow_balls = []
+chosen_card = None
 # actual game
 running = True
 while running: 
@@ -120,18 +122,9 @@ while running:
                 if chosen_card:
                     print("You picked: ", chosen_card.name)
             if event.key == pygame.K_z and chosen_card is not None: # Press Z to activate the chosen card effect
-                    ball_data = { ##place holder
-                    'x': ballConfig['init_x'],
-                    'y': ballConfig['init_y'],
-                    'vel_x': ballConfig['init_vel_x'],
-                    'vel_y': ballConfig['init_vel_y'],
-                    'vel_z': ballConfig['init_vel_z'],
-                    'height': ballConfig['init_height'],
-                    'radius': ballConfig['Radius']
-                         }
-                    chosen_card.activate(data=ball_data) # place holder for data, once we figure out which actual ball data we need I'll make it
-                    print("Activated card effect:", chosen_card.name)
-                    chosen_card = None  # Clear the chosen card after activation
+                   chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                   print("Activated card effect:", chosen_card.name)
+                   chosen_card = None  # Clear the chosen card after activation
 
     dt = clock.tick(screenConfig['FPS'])
     keys = pygame.key.get_pressed()
@@ -153,12 +146,16 @@ while running:
             ball.impulse((paddle1.velocity[X] * 0.01 * dt / 1000, paddle1.velocity[Y] * 0.1 * dt / 1000, 0))
             ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
             paddle1.has_hit_ball = True # Prevent multiple hits in one swing
+            if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7:
+                paddle1.position = (paddle1.position[X] - 30, paddle1.position[Y]) #Should push paddle when returning a smash
     if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
         if ball.get_velocity()[X] >= 0:
             ball.bounce(-1, paddle2.swingAngle)
             ball.impulse((paddle2.velocity[X] * 0.01 * dt / 1000, paddle2.velocity[Y] * 0.1 * dt / 1000, 0))
             ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
             paddle2.has_hit_ball = True # Prevent multiple hits in one swing
+            if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7: #Should push paddle when returning a smash
+                paddle2.position = (paddle2.position[X] + 30, paddle2.position[Y])
     ball.clamp_velocity()
 
     draw_table()
@@ -167,6 +164,12 @@ while running:
     paddle2.draw(screen=screen)
 
     ball.draw(screen=screen)
+
+    for shadow in shadow_balls[:]:
+        shadow.draw(screen=screen)
+        if shadow.get_height() <= 0:
+            shadow_balls.remove(shadow)
+
     pygame.display.flip()
 
 pygame.quit()
