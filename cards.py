@@ -12,12 +12,14 @@ class Card:
     type: CardTypes     # Specifies card type. I dunno if we need it yet, but it's probably not bad to have.
     effect_fn: callable
     effects: list[str]  # A list of effects to activate when the card is used, activated by getattr(). 
+    is_Passive: bool     # Whether the card's effect is passive (always on) or active (activated by player)
 
-    def __init__(self, name = "Card", effect_fn = None, cardType = CardTypes.Typeless):
+    def __init__(self, name = "Card", effect_fn = None, cardType = CardTypes.Typeless, is_Passive=False):
         self.name = name
         self.type = cardType
         self.effect_fn = effect_fn
         self.effects = []
+        self.is_Passive = is_Passive
 
     def activate(self, **kwargs):
         '''The function to call when the card is used, which activates all of its effects. The caller parameter 
@@ -174,7 +176,8 @@ def shadow_clone_effect(ball, shadow_balls, **kwargs):
 def low_impact_effect(ball, **kwargs):
         print("Low impact activated!")
         vel = ball.get_velocity()
-        ball.impulse((vel[0] * 0.5, 0, 0))
+        if abs(vel[X]) >= ball.max_speed * 0.7:  # only boost if incoming ball is a smash
+            ball.set_velocity(vel[X] * 2.0, vel[Y], vel[2])
     
 
 def high_impact_effect(ball, paddle1, paddle2, **kwargs):
@@ -195,8 +198,8 @@ cards = [
           Card("Bigger is better", bigger_is_better_effect), #cards[1]
           Card("Bring it back", bring_it_back_effect), #cards[2]
           Card("Shadow Clone", shadow_clone_effect), #cards[3]
-          Card("Low impact", low_impact_effect), #cards[4]
-          Card("High impact", high_impact_effect), #cards[5]
+          Card("Low impact", low_impact_effect, is_Passive=True), #cards[4]
+          Card("High impact", high_impact_effect, is_Passive=True), #cards[5]
           Card("Shrink", shrink_effect) #cards[6]
 ]
 card_count = 0

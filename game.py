@@ -146,6 +146,8 @@ while running:
             ball.impulse((paddle1.velocity[X] * 0.01 * dt / 1000, paddle1.velocity[Y] * 0.1 * dt / 1000, 0))
             ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
             paddle1.has_hit_ball = True # Prevent multiple hits in one swing
+            if chosen_card and chosen_card.is_Passive:  # passive triggers on hit
+                chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
             if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7:
                 paddle1.position = (paddle1.position[X] - 30, paddle1.position[Y]) #Should push paddle when returning a smash
     if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
@@ -154,6 +156,8 @@ while running:
             ball.impulse((paddle2.velocity[X] * 0.01 * dt / 1000, paddle2.velocity[Y] * 0.1 * dt / 1000, 0))
             ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
             paddle2.has_hit_ball = True # Prevent multiple hits in one swing
+            if chosen_card and chosen_card.is_Passive:  # passive triggers on hit
+                chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
             if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7: #Should push paddle when returning a smash
                 paddle2.position = (paddle2.position[X] + 30, paddle2.position[Y])
     ball.clamp_velocity()
