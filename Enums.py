@@ -30,6 +30,7 @@ RIGHT = 3
 # colors constants
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+YELLOW = (255, 255, 0)
 RED_TABLE = (170, 40, 40)
 LIGHT_BROWN = (200, 170, 130)
 ORANGE = (255, 165, 0)

@@ -207,7 +207,7 @@ class PongPaddle:
         charge_progress = self.smashTimer / self.smashHoldTime  
 
         if charge_progress < 1.0:
-            sprite_index = int(charge_progress * 3) + 1  
+            sprite_index = min(int(charge_progress * 3) + 1, 2)
             self.currentSpeed = self.speed * 0.5
             self.paddleSurface = self.sprites[sprite_index]
         else:
@@ -217,7 +217,7 @@ class PongPaddle:
     def draw(self, screen: pg.Surface):
         screen.blit(self.paddleSurface, self.position)
         if self.viewDebug:
-            pg.draw.rect(screen, WHITE, self.hitbox, 2)
+            pg.draw.rect(screen, YELLOW if self.can_hit_ball else WHITE, self.hitbox, 2)
             text = self.font.render(f"smashTimer: {int(self.smashTimer)}ms", True, WHITE)
             screen.blit(text, (self.position[X], self.position[Y] + 30))
             text = self.font.render(f"swingTimer: {int(self.swingTimer)}ms", True, WHITE)
