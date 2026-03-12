@@ -6,6 +6,7 @@ from Enums import *
 from ball import Ball
 import ball
 
+#Call cardeffect.json file
 class Card:
     '''The class containing card data.'''
     name: str
@@ -26,8 +27,6 @@ class Card:
         is the object that will call the effects.'''
         if self.effect_fn:
             self.effect_fn(**kwargs)
-        #for effect in self.effects:
-            #getattr(caller, effect)(data[effect])  # Pass data to each effect function
 
 class Deck:
     '''Stack for cards, has both a draw and discard pile for the cards.'''
@@ -110,7 +109,6 @@ def set_velocity(self, vx, vy, vz):
 def arc_strike_effect(ball, **kwargs):
         print("Arc Strike activated!")
         vel = ball.get_velocity()
-        #current_spin = ball.spin if hasattr(ball, 'spin') else 0
         if vel[X] > 0:                  # ball moving right, paddle1 last hit it
             ball.spin = 0.15             # curve right
         else:                           # ball moving left, paddle2 last hit it
@@ -129,25 +127,6 @@ def bring_it_back_effect(ball, paddle1, paddle2, **kwargs):
         print("Bring it back activated!")
         vel = ball.get_velocity()
         ball.set_velocity(-vel[X], vel[Y], vel[2])
-        #pos = ball.get_position()
-
-        #if vel[X] > 0:
-            #target_x = paddle1.hitbox.centerx
-            #direction = -1  
-        #else:
-            #target_x = paddle2.hitbox.centerx
-            #direction = 1
-        #dx = abs(target_x - pos[0])
-        #dy = paddle1.hitbox.centery - pos[1] if direction == -1 else paddle2.hitbox.centery - pos[1]
-
-        # Set velocity directly towards the target paddle
-        #speed = max(abs(vel[X]), ball.max_speed * 0.5)  # minimum speed
-        #angle = dy / dx if dx != 0 else 0               # rise over run
-        #ball._Ball__velocity = (
-            #direction * speed,
-            #angle * speed,                               # aim at paddle height
-            #vel[2]
-       # )
 
 def shadow_clone_effect(ball, shadow_balls, **kwargs):
         print("Shadow Clone activated!")
@@ -182,7 +161,6 @@ def low_impact_effect(ball, **kwargs):
 
 def high_impact_effect(ball, paddle1, paddle2, **kwargs):
         print("High impact activated!")
-        #if Smash1_active or Smash2_active:
         paddle1.smashPower = min(paddle1.smashPower * 1.5, 1.0)
         paddle2.smashPower = min(paddle2.smashPower * 1.5, 1.0)
 
