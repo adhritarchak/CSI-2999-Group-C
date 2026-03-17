@@ -26,7 +26,7 @@
     }, 
     "Ball Physics": {
         "Radius": 8, 
-        "Max_Height": 25, 
+        "Max_Height": 75, 
         "Gravity": 0.35, 
         "BounceSpeedLost": 0.85, 
         "Max_Speed": 10, 

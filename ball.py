@@ -14,7 +14,7 @@ class Ball:
     draw_prediction: bool = False  # whether to draw a prediction of the ball's trajectory
     ellipse_scale: tuple[float, float] = (1.8, 1.2)  # scale of the ellipse drawn at the predicted landing position (x scale, y scale)
 
-    def __init__(self, x, y, vel_z, height, speed_x, speed_y, radius, spin, chosen_card, max_speed = 10, ):
+    def __init__(self, x, y, vel_z, height, speed_x, speed_y, radius, spin, chosen_card, max_speed = 10, max_height = 75):
         self.__position = (x, y, height)
         self.__velocity = (speed_x, speed_y, vel_z)  # Vertical speed starts at 0
         self.__bounds = (0, 600, 0, 800)  # Default bounds for the ball to move in (top, bottom, left, right)
@@ -23,6 +23,7 @@ class Ball:
         self.chosen_card = None
         self.max_speed = max_speed
         self.served = False
+        self.max_height = max_height
 
     def get_velocity(self):
         return self.__velocity
@@ -95,6 +96,9 @@ class Ball:
                 nextVel[Y],
                 -nextVel[HEIGHT] * self.bounciness
             )  # Bounce off the ground
+        if nextPos[HEIGHT] > self.max_height:  # Cap the ball's height
+            nextPos = (nextPos[X], nextPos[Y], self.max_height)
+            nextVel = (nextVel[X], nextVel[Y], min(nextVel[HEIGHT], 0))
         if nextPos[X] < self.__bounds[LEFT] + self.radius or nextPos[X] > self.__bounds[RIGHT] - self.radius:  # If the ball goes off the left or right bounds
             nextVel = (-nextVel[X], nextVel[Y], nextVel[HEIGHT])  # Bounce horizontally
         if nextPos[Y] < self.__bounds[TOP] + self.radius or nextPos[Y] > self.__bounds[BOTTOM] - self.radius:  # If the ball goes off the top or bottom bounds
