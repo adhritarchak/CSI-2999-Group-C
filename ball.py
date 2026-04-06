@@ -32,6 +32,10 @@ class Ball:
     def get_height(self):
         return self.__position[HEIGHT]
     
+    def set_position(self, x, y, height):
+        '''Set the ball's position'''
+        self.__position = (x, y, height)
+    
     def set_bounds(self, top, bottom, left, right):
         self.__bounds = (top, bottom, left, right)
     def set_gravity(self, gravity):
@@ -95,8 +99,11 @@ class Ball:
                 nextVel[Y],
                 -nextVel[HEIGHT] * self.bounciness
             )  # Bounce off the ground
-        if nextPos[X] < self.__bounds[LEFT] + self.radius or nextPos[X] > self.__bounds[RIGHT] - self.radius:  # If the ball goes off the left or right bounds
-            nextVel = (-nextVel[X], nextVel[Y], nextVel[HEIGHT])  # Bounce horizontally
+        
+        # LEFT/RIGHT BOUNDARY BOUNCE REMOVED - Ball now passes through for scoring
+        # if nextPos[X] < self.__bounds[LEFT] + self.radius or nextPos[X] > self.__bounds[RIGHT] - self.radius:
+        #     nextVel = (-nextVel[X], nextVel[Y], nextVel[HEIGHT])
+        
         if nextPos[Y] < self.__bounds[TOP] + self.radius or nextPos[Y] > self.__bounds[BOTTOM] - self.radius:  # If the ball goes off the top or bottom bounds
             nextVel = (nextVel[X], -nextVel[Y], nextVel[HEIGHT])  # Bounce vertically
         return nextPos, nextVel

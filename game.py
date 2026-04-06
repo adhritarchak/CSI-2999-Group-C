@@ -1,6 +1,11 @@
 import pygame
 import sys
+import json
 from Pong import *
+from cards import draw_random_card
+from scoreboard import Scoreboard
+from game_scoring import GameScoring
+
 pygame.init()
 
 # Load config from JSON file
@@ -33,17 +38,6 @@ Bot_Boundary = Table_Rect.bottom
 Center_x = Table_Rect.centerx
 Center_y = Table_Rect.centery
 
-
-Smash1_hold_time = 0
-Smash1_hit = False
-Smash1_hit_time = 0
-Smash1_active = False
-Smash2_hold_time = 0
-Smash2_active = False
-Smash_duration = 3000
-Smash2_hit = False
-Smash2_hit_time = 0
-
 #paddles setup
 paddle1_x = Left_Boundary + 50
 paddle1_y = Center_y - paddleConfig['Paddle_Height'] // 2
@@ -68,8 +62,8 @@ paddle2.setSwingConfig(paddleConfig['SwingBackTime'], paddleConfig['SwingForward
 def draw_table():
     # Background
     screen.fill(colorConfig['Light Brown'])
-    colorConfig['Shadow'] = Table_Rect.move(6, 6)
-    pygame.draw.rect(screen, colorConfig['Black'], colorConfig['Shadow'], border_radius=6)
+    shadow_rect = Table_Rect.move(6, 6)
+    pygame.draw.rect(screen, colorConfig['Black'], shadow_rect, border_radius=6)
     pygame.draw.rect(screen, colorConfig['Red Table'], Table_Rect)
 
     # Table border
@@ -91,7 +85,7 @@ def draw_table():
         tableConfig['Midline_Thickness']
     )
 
-ball = Ball(x=paddle1.hitbox.right + ballConfig['Radius'] + 5, #Ball will start just to the right of paddle 1
+ball = Ball(x=paddle1.hitbox.right + ballConfig['Radius'] + 5,
             y=paddle1.hitbox.centery,
             height=ballConfig['init_height'],
             vel_z=0,
@@ -109,58 +103,172 @@ paddle2.viewDebugInfo(screenConfig['View_Debug'])
 
 shadow_balls = []
 chosen_card = None
+
+# ===== SCORING SYSTEM =====
+scoreboard = Scoreboard(screen, font)
+
+scoring = GameScoring(
+    scoreboard, ball, paddle1, paddle2, 
+    {'left': Left_Boundary, 'right': Right_Boundary, 'top': Top_Boundary, 'bottom': Bot_Boundary}
+)
+
+waiting_for_serve = True
+serve_timer = 30
+# ===== END SCORING SYSTEM =====
+
 # actual game
 running = True
 while running: 
+    dt = clock.tick(screenConfig['FPS'])
+    
+    # ===== HANDLE EVENTS =====
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
             continue
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_c:  # Press C to open cards
-                chosen_card = draw_random_card(screen, font)
-                if chosen_card:
-                    print("You picked: ", chosen_card.name)
-            if event.key == pygame.K_z and chosen_card is not None: # Press Z to activate the chosen card effect
-                   chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
-                   print("Activated card effect:", chosen_card.name)
-                   chosen_card = None  # Clear the chosen card after activation
-
-    dt = clock.tick(screenConfig['FPS'])
+            if event.key == pygame.K_ESCAPE:
+                running = False
+                continue
+            if event.key == pygame.K_c:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    chosen_card = draw_random_card(screen, font)
+                    if chosen_card:
+                        print("You picked: ", chosen_card.name)
+            if event.key == pygame.K_z and chosen_card is not None:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                    print("Activated card effect:", chosen_card.name)
+                    chosen_card = None
+            if event.key == pygame.K_SPACE:
+                if scoreboard.showing_round_end:
+                    # Start next round
+                    scoreboard.start_next_round()
+                    scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary)
+                    
+                    # Reset and serve ball immediately
+                    ball.set_position(
+                        paddle1.hitbox.right + ballConfig['Radius'] + 5,
+                        paddle1.hitbox.centery,
+                        ballConfig['init_height']
+                    )
+                    ball.set_velocity(0, 0, 0)
+                    ball.bounce(1, 0)
+                    ball.served = True
+                    
+                    waiting_for_serve = False
+                    chosen_card = None
+                    shadow_balls.clear()
+                    scoreboard.showing_round_end = False
+                    
+                elif scoreboard.showing_match_end:
+                    # Restart entire match
+                    scoreboard.reset_match()
+                    scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary)
+                    waiting_for_serve = True
+                    serve_timer = 30
+                    chosen_card = None
+                    shadow_balls.clear()
+                    ball.set_velocity(0, 0, 0)
+                    ball.served = False
+                    scoreboard.showing_match_end = False
+    
+    # ===== SHOW ROUND END SCREEN =====
+    if scoreboard.showing_round_end:
+        draw_table()
+        paddle1.draw(screen=screen)
+        paddle2.draw(screen=screen)
+        ball.draw(screen=screen)
+        for shadow in shadow_balls[:]:
+            shadow.draw(screen=screen)
+            if shadow.get_height() <= 0:
+                shadow_balls.remove(shadow)
+        scoreboard.draw_round_end()
+        pygame.display.flip()
+        continue
+    
+    # ===== SHOW MATCH END SCREEN =====
+    if scoreboard.match_over or scoreboard.showing_match_end:
+        draw_table()
+        paddle1.draw(screen=screen)
+        paddle2.draw(screen=screen)
+        ball.draw(screen=screen)
+        for shadow in shadow_balls[:]:
+            shadow.draw(screen=screen)
+            if shadow.get_height() <= 0:
+                shadow_balls.remove(shadow)
+        scoreboard.draw_match_end()
+        pygame.display.flip()
+        continue
+    
     keys = pygame.key.get_pressed()
     
-
-    paddle1.process_keys(keys, dt)
-    paddle2.process_keys(keys, dt)
-
+    # ===== CHECK FOR SCORING =====
+    scored, winner = scoring.check_score()
+    if scored:
+        print(f"SCORING EVENT - Winner: Player {winner}")
+        round_continues = scoreboard.add_point(winner)
+        if round_continues:
+            # Reset ball for next point
+            scoring.reset_ball_for_serve(ballConfig)
+            scoring.reset_paddle_states()
+            waiting_for_serve = True
+            serve_timer = 30
+        continue
     
-    paddle1.process_swing(dt)
-    paddle2.process_swing(dt)
+    # ===== HANDLE SERVE WAITING STATE =====
+    if waiting_for_serve:
+        if serve_timer > 0:
+            serve_timer -= 1
+        else:
+            waiting_for_serve = False
+            ball.bounce(1, 0)
+            ball.served = True
+        
+        # Process paddle inputs while waiting
+        paddle1.process_keys(keys, dt)
+        paddle2.process_keys(keys, dt)
+        paddle1.process_swing(dt)
+        paddle2.process_swing(dt)
+        paddle1.process_smash(dt)
+        paddle2.process_smash(dt)
+    else:
+        # ===== NORMAL GAME LOGIC =====
+        paddle1.process_keys(keys, dt)
+        paddle2.process_keys(keys, dt)
+        
+        paddle1.process_swing(dt)
+        paddle2.process_swing(dt)
 
-    paddle1.process_smash(dt)
-    paddle2.process_smash(dt)
+        paddle1.process_smash(dt)
+        paddle2.process_smash(dt)
 
-    if ball.within_rect(paddle1.get_hitbox(), (0, 0)) and paddle1.can_hit_ball:
-        if ball.get_velocity()[X] <= 0:
-            ball.bounce(1, paddle1.swingAngle)
-            ball.impulse((paddle1.velocity[X] * 0.01 * dt / 1000, paddle1.velocity[Y] * 0.1 * dt / 1000, 0))
-            ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
-            paddle1.has_hit_ball = True # Prevent multiple hits in one swing
-            if chosen_card and chosen_card.is_Passive:  # passive triggers on hit
-                chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
-            if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7:
-                paddle1.position = (paddle1.position[X] - 30, paddle1.position[Y]) #Should push paddle when returning a smash
-    if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
-        if ball.get_velocity()[X] >= 0:
-            ball.bounce(-1, paddle2.swingAngle)
-            ball.impulse((paddle2.velocity[X] * 0.01 * dt / 1000, paddle2.velocity[Y] * 0.1 * dt / 1000, 0))
-            ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
-            paddle2.has_hit_ball = True # Prevent multiple hits in one swing
-            if chosen_card and chosen_card.is_Passive:  # passive triggers on hit
-                chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
-            if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7: #Should push paddle when returning a smash
-                paddle2.position = (paddle2.position[X] + 30, paddle2.position[Y])
-    ball.clamp_velocity()
+        if ball.within_rect(paddle1.get_hitbox(), (0, 0)) and paddle1.can_hit_ball:
+            if ball.get_velocity()[0] <= 0:
+                ball.bounce(1, paddle1.swingAngle)
+                ball.impulse((paddle1.velocity[0] * 0.01 * dt / 1000, paddle1.velocity[1] * 0.1 * dt / 1000, 0))
+                ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
+                paddle1.has_hit_ball = True
+                if chosen_card and chosen_card.is_Passive:
+                    chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
+                    paddle1.position = (paddle1.position[0] - 30, paddle1.position[1])
+                    
+        if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
+            if ball.get_velocity()[0] >= 0:
+                ball.bounce(-1, paddle2.swingAngle)
+                ball.impulse((paddle2.velocity[0] * 0.01 * dt / 1000, paddle2.velocity[1] * 0.1 * dt / 1000, 0))
+                ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
+                paddle2.has_hit_ball = True
+                if chosen_card and chosen_card.is_Passive:
+                    chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
+                    paddle2.position = (paddle2.position[0] + 30, paddle2.position[1])
+                    
+        ball.clamp_velocity()
+    
+    # Update ball physics
+    ball.update_position()
 
     draw_table()
 
@@ -173,6 +281,9 @@ while running:
         shadow.draw(screen=screen)
         if shadow.get_height() <= 0:
             shadow_balls.remove(shadow)
+    
+    # Draw scoreboard
+    scoreboard.draw()
 
     pygame.display.flip()
 
