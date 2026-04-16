@@ -327,55 +327,6 @@ ball.do_draw_prediction(screenConfig['View_Debug'])
 paddle1.viewDebugInfo(screenConfig['View_Debug'])
 paddle2.viewDebugInfo(screenConfig['View_Debug'])
 
-if ball.get_position()[0] < Left_Boundary:
-    # Player 2 scores
-    if not waiting_for_card and not show_score:
-        show_score = True
-        last_scorer = 2
-        score_timer = pg.time.get_ticks()
-        waiting_for_card = True
-        current_player_selecting = 2
-        # Reset ball position
-        ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
-        ball.set_velocity(0, 0, 0)
-        ball.served = False
-        
-elif ball.get_position()[0] > Right_Boundary:
-    # Player 1 scores
-    if not waiting_for_card and not show_score:
-        show_score = True
-        last_scorer = 1
-        score_timer = pg.time.get_ticks()
-        waiting_for_card = True
-        current_player_selecting = 1
-        # Reset ball position
-        ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
-        ball.set_velocity(0, 0, 0)
-        ball.served = False
-
-# Handle score display and card selection
-if show_score:
-    current_time = pg.time.get_ticks()
-    if current_time - score_timer >= score_display_time:
-        show_score = False
-        # Show card selection for the player who lost the point
-        if waiting_for_card and current_player_selecting:
-            selected_card = draw_random_card(screen, font, current_player_selecting)
-            if selected_card:
-                print(f"Player {current_player_selecting} selected: {selected_card.name}")
-            waiting_for_card = False
-            current_player_selecting = None
-            # Reset ball for next point
-            ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
-            ball.set_velocity(0, 0, 0)
-            ball.served = False
-if show_score:
-    score_surface = font.render(f"Player {last_scorer} Scores!", True, (255, 255, 255))
-    score_rect = score_surface.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
-    screen.blit(score_surface, score_rect)
-
-
-
 ball.rally_active = False
 ball.rally_timer = 0
 ball.rally_activator = None
@@ -479,6 +430,7 @@ while running:
             if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7: #Should push paddle when returning a smash
                 paddle2.position = (paddle2.position[X] + 30, paddle2.position[Y])
     ball.clamp_velocity()
+
     if ball.get_position()[0] < Left_Boundary:
     # Player 2 scores
         if not waiting_for_card and not show_score:
@@ -521,12 +473,32 @@ while running:
                 ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
                 ball.set_velocity(0, 0, 0)
                 ball.served = False
-    if show_score:
         score_surface = font.render(f"Player {last_scorer} Scores!", True, (255, 255, 255))
         score_rect = score_surface.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
         screen.blit(score_surface, score_rect)
     
-
+    if ball.rally_active:
+        ball.rally_timer -= dt
+        if ball.rally_timer <= 0:
+            # Rally effect expires
+            ball.rally_active = False
+            ball.max_speed = ball.original_max_speed
+            print("Rally effect expired!")
+        else:
+            # Check current ball speed and apply slowing if needed
+            current_speed = abs(ball.get_velocity()[0])  # Horizontal speed
+            if current_speed > ball.rally_speed_threshold:
+                # Apply slowing effect by temporarily reducing max speed
+                slowed_max_speed = ball.original_max_speed * ball.rally_slow_factor
+                ball.max_speed = max(slowed_max_speed, ball.rally_speed_threshold)
+                
+                # Optional: Visual indicator that rally is active
+                if int(ball.rally_timer / 1000) != int((ball.rally_timer + dt) / 1000):
+                    seconds_left = int(ball.rally_timer / 1000) + 1
+                    print(f"Rally active: {seconds_left} seconds remaining")
+            else:
+                # Restore original max speed when ball is not going fast
+                ball.max_speed = ball.original_max_speed
     draw_table()
 
     paddle1.draw(screen=screen)
