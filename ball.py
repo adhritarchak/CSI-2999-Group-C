@@ -100,11 +100,11 @@ class Ball:
                 nextVel[Y],
                 -nextVel[HEIGHT] * self.bounciness
             )  # Bounce off the ground
-        if nextPos[X] < self.__bounds[LEFT] + self.radius or nextPos[X] > self.__bounds[RIGHT] - self.radius:  # If the ball goes off the left or right bounds
-            nextVel = (-nextVel[X], nextVel[Y], nextVel[HEIGHT])  # Bounce horizontally
-        if nextPos[Y] < self.__bounds[TOP] + self.radius or nextPos[Y] > self.__bounds[BOTTOM] - self.radius:  # If the ball goes off the top or bottom bounds
-            nextVel = (nextVel[X], -nextVel[Y], nextVel[HEIGHT])  # Bounce vertically
-        return nextPos, nextVel
+        #if nextPos[X] < self.__bounds[LEFT] + self.radius or nextPos[X] > self.__bounds[RIGHT] - self.radius:  # If the ball goes off the left or right bounds
+            #nextVel = (-nextVel[X], nextVel[Y], nextVel[HEIGHT])  # Bounce horizontally
+       #if nextPos[Y] < self.__bounds[TOP] + self.radius or nextPos[Y] > self.__bounds[BOTTOM] - self.radius:  # If the ball goes off the top or bottom bounds
+            #nextVel = (nextVel[X], -nextVel[Y], nextVel[HEIGHT])  # Bounce vertically
+        #return nextPos, nextVel
 
     def draw_trajectory(self, screen, draw_lines = False):
         '''Draw a prediction of the ball's trajectory on the screen.'''

@@ -357,7 +357,7 @@ while running:
                 continue
             if event.key == pygame.K_c:
                 if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
-                    chosen_card = draw_random_card(screen, font)
+                    chosen_card = draw_random_card(screen, font, 1)
                     if chosen_card:
                         print("You picked: ", chosen_card.name)
             if event.key == pygame.K_z and chosen_card is not None:
@@ -498,7 +498,30 @@ while running:
         paddle1.process_smash(dt)
         paddle2.process_smash(dt)
 
-   
+
+    if ball.within_rect(paddle1.get_hitbox(), (0, 0)) and paddle1.can_hit_ball:
+        if ball.get_velocity()[X] <= 0:
+            ball.bounce(1, paddle1.swingAngle)
+            ball.impulse((paddle1.velocity[X] * 0.01 * dt / 1000, paddle1.velocity[Y] * 0.1 * dt / 1000, 0))
+            ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
+            paddle1.has_hit_ball = True # Prevent multiple hits in one swing
+            if chosen_card and chosen_card.is_Passive:  # passive triggers on hit
+                chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+            if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7:
+                paddle1.position = (paddle1.position[X] - 30, paddle1.position[Y]) #Should push paddle when returning a smash
+
+    if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
+        if ball.get_velocity()[X] >= 0:
+            ball.bounce(-1, paddle2.swingAngle)
+            ball.impulse((paddle2.velocity[X] * 0.01 * dt / 1000, paddle2.velocity[Y] * 0.1 * dt / 1000, 0))
+            ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
+            paddle2.has_hit_ball = True # Prevent multiple hits in one swing
+            if chosen_card and chosen_card.is_Passive:  # passive triggers on hit
+                chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+            if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7: #Should push paddle when returning a smash
+                paddle2.position = (paddle2.position[X] + 30, paddle2.position[Y])
+    ball.clamp_velocity()
+
     if paddle1.debuff_timer > 0:
         paddle1.debuff_timer -= dt
         paddle1_debuff_printed = False
@@ -533,32 +556,6 @@ while running:
                 if paddle2_debuff_expired == True:
                     print("Paddle2 debuffs expired")
                     paddle2_debuff_printed = True
-
-
-    if ball.within_rect(paddle1.get_hitbox(), (0, 0)) and paddle1.can_hit_ball:
-        if ball.get_velocity()[X] <= 0:
-            ball.bounce(1, paddle1.swingAngle)
-            ball.impulse((paddle1.velocity[X] * 0.01 * dt / 1000, paddle1.velocity[Y] * 0.1 * dt / 1000, 0))
-            ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
-            paddle1.has_hit_ball = True # Prevent multiple hits in one swing
-            if chosen_card and chosen_card.is_Passive:  # passive triggers on hit
-                chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
-            if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7:
-                paddle1.position = (paddle1.position[X] - 30, paddle1.position[Y]) #Should push paddle when returning a smash
-
-    if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
-        if ball.get_velocity()[X] >= 0:
-            ball.bounce(-1, paddle2.swingAngle)
-            ball.impulse((paddle2.velocity[X] * 0.01 * dt / 1000, paddle2.velocity[Y] * 0.1 * dt / 1000, 0))
-            ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
-            paddle2.has_hit_ball = True # Prevent multiple hits in one swing
-            if chosen_card and chosen_card.is_Passive:  # passive triggers on hit
-                chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
-            if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7: #Should push paddle when returning a smash
-                paddle2.position = (paddle2.position[X] + 30, paddle2.position[Y])
-    ball.clamp_velocity()
-
-    
     if ball.rally_active:
         ball.rally_timer -= dt
         if ball.rally_timer <= 0:
