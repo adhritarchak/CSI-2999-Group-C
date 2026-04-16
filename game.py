@@ -61,10 +61,11 @@ paddle1.setSwingConfig(paddleConfig['SwingBackTime'], paddleConfig['SwingForward
 paddle2.setSwingConfig(paddleConfig['SwingBackTime'], paddleConfig['SwingForwardTime'], paddleConfig['SmashHoldtime'], paddleConfig['CooldownTime'])
 
 class PlayerCardInventory:
-    def __init__(self, max_slots=5):
+    def __init__(self, max_slots=5, player_id = None):
         self.cards = []  # List of Card objects
         self.max_slots = max_slots
-    
+        self.player_id = player_id
+
     def add_card(self, card):
         if len(self.cards) < self.max_slots:
             self.cards.append(card)
@@ -360,11 +361,74 @@ while running:
                     chosen_card = draw_random_card(screen, font, 1)
                     if chosen_card:
                         print("You picked: ", chosen_card.name)
-            if event.key == pygame.K_z and chosen_card is not None:
+            #Player 1 uses 1,2,3,4,5 keys (left side of keyboard)
+            if event.key == pygame.K_1 and len(player1_inventory.cards) > 0:
                 if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
-                    chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
-                    print("Activated card effect:", chosen_card.name)
-                    chosen_card = None
+                    card = player1_inventory.get_card(0)
+                    card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls, activator=1)
+                    player1_inventory.remove_card(0)
+                    print(f"Player 1 used: {card.name}")
+
+            elif event.key == pygame.K_2 and len(player1_inventory.cards) > 1:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    card = player1_inventory.get_card(1)
+                    card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls, activator=1)
+                    player1_inventory.remove_card(1)
+                    print(f"Player 1 used: {card.name}")
+            elif event.key == pygame.K_3 and len(player1_inventory.cards) > 2:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    card = player1_inventory.get_card(2)
+                    card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls, activator=1)
+                    player1_inventory.remove_card(2)
+                    print(f"Player 1 used: {card.name}")
+            elif event.key == pygame.K_4 and len(player1_inventory.cards) > 3:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    card = player1_inventory.get_card(3)
+                    card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls, activator=1)
+                    player1_inventory.remove_card(3)
+                    print(f"Player 1 used: {card.name}")
+            elif event.key == pygame.K_5 and len(player1_inventory.cards) > 4:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    card = player1_inventory.get_card(4)
+                    card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls, activator=1)
+                    player1_inventory.remove_card(4)
+                    print(f"Player 1 used: {card.name}")
+            # Player 2 uses I, O, P, K, L keys (right side of keyboard)
+            elif event.key == pygame.K_i and len(player2_inventory.cards) > 0:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    card = player2_inventory.get_card(0)
+                    card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls, activator=2)
+                    player2_inventory.remove_card(0)
+                    print(f"Player 2 used: {card.name}")
+
+            elif event.key == pygame.K_o and len(player2_inventory.cards) > 1:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    card = player2_inventory.get_card(1)
+                    card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls, activator=2)
+                    player2_inventory.remove_card(1)
+                    print(f"Player 2 used: {card.name}")
+
+            elif event.key == pygame.K_p and len(player2_inventory.cards) > 2:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    card = player2_inventory.get_card(2)
+                    card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls, activator=2)
+                    player2_inventory.remove_card(2)
+                    print(f"Player 2 used: {card.name}")
+
+            elif event.key == pygame.K_k and len(player2_inventory.cards) > 3:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    card = player2_inventory.get_card(3)
+                    card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls, activator=2)
+                    player2_inventory.remove_card(3)
+                    print(f"Player 2 used: {card.name}")
+
+            elif event.key == pygame.K_l and len(player2_inventory.cards) > 4:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    card = player2_inventory.get_card(4)
+                    card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls, activator=2)
+                    player2_inventory.remove_card(4)
+                    print(f"Player 2 used: {card.name}")
+
             if event.key == pygame.K_SPACE:
                 if scoreboard.showing_round_end:
                     # Start next round
@@ -411,16 +475,6 @@ while running:
                 shadow_balls.remove(shadow)
         scoreboard.draw_round_end()
         pygame.display.flip()
-        if waiting_for_card and current_player_selecting:
-            selected_card = draw_random_card(screen, font, current_player_selecting)
-            if selected_card:
-                print(f"Player {current_player_selecting} selected: {selected_card.name}")
-                waiting_for_card = False
-                current_player_selecting = None
-                # Reset ball for next point
-                ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
-                ball.set_velocity(0, 0, 0)
-                ball.served = False
         continue
     
     # ===== SHOW MATCH END SCREEN =====
@@ -445,14 +499,40 @@ while running:
     if scored:
         print(f"SCORING EVENT - Winner: Player {winner}")
         last_scorer = winner  # Track who scored
+        losing_player = 2 if winner == 1 else 1
+        #waiting_for_card = True
+        #current_player_selecting = losing_player
+    
         round_continues = scoreboard.add_point(winner)
         if round_continues:
-            # Reset ball for next point - ball appears on the LOSER's side
-            scoring.reset_ball_for_serve(ballConfig, last_scorer)  # Pass the scorer
+        # Reset ball for next point - ball appears on the LOSER's side
+            scoring.reset_ball_for_serve(ballConfig, last_scorer)
             scoring.reset_paddle_states()
             waiting_for_serve = True
             serve_timer = 30
-        continue
+        else:
+            selected_card = draw_random_card(screen, font, losing_player)
+            if selected_card:
+                print(f"Player {losing_player} selected: {selected_card.name}")
+        # SHOW CARD SELECTION IMMEDIATELY AFTER SCORING
+           # if waiting_for_card and current_player_selecting:
+               # selected_card = draw_random_card(screen, font, current_player_selecting)
+               # if selected_card:
+               #     print(f"Player {current_player_selecting} selected: {selected_card.name}")
+               # if current_player_selecting == 1:
+               #     player1_inventory.add_card(selected_card)
+               # else:
+               #     player2_inventory.add_card(selected_card)
+            scoreboard.start_next_round()
+            scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary)
+            waiting_for_serve = True
+            serve_timer = 30
+            ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
+            ball.set_velocity(0, 0, 0)
+            ball.served = False
+            chosen_card = None
+            shadow_balls.clear()
+            continue
     
     # ===== HANDLE SERVE WAITING STATE =====
     if waiting_for_serve:
