@@ -355,6 +355,7 @@ scoring = GameScoring(
 
 waiting_for_serve = True
 serve_timer = 30
+last_scorer = None  # Track who scored last to determine server
 # ===== END SCORING SYSTEM =====
 
 # actual game
@@ -387,20 +388,21 @@ while running:
                     scoreboard.start_next_round()
                     scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary)
                     
-                    # Reset and serve ball immediately
+                    # Reset ball to player 1's side for new round
                     ball.set_position(
                         paddle1.hitbox.right + ballConfig['Radius'] + 5,
                         paddle1.hitbox.centery,
                         ballConfig['init_height']
                     )
                     ball.set_velocity(0, 0, 0)
-                    ball.bounce(1, 0)
-                    ball.served = True
+                    ball.served = False
                     
-                    waiting_for_serve = False
+                    waiting_for_serve = True
+                    serve_timer = 30
                     chosen_card = None
                     shadow_balls.clear()
                     scoreboard.showing_round_end = False
+                    last_scorer = None
                     
                 elif scoreboard.showing_match_end:
                     # Restart entire match
@@ -413,6 +415,7 @@ while running:
                     ball.set_velocity(0, 0, 0)
                     ball.served = False
                     scoreboard.showing_match_end = False
+                    last_scorer = None
     
     # ===== SHOW ROUND END SCREEN =====
     if scoreboard.showing_round_end:
@@ -448,10 +451,11 @@ while running:
     scored, winner = scoring.check_score()
     if scored:
         print(f"SCORING EVENT - Winner: Player {winner}")
+        last_scorer = winner  # Track who scored
         round_continues = scoreboard.add_point(winner)
         if round_continues:
-            # Reset ball for next point
-            scoring.reset_ball_for_serve(ballConfig)
+            # Reset ball for next point - ball appears on the LOSER's side
+            scoring.reset_ball_for_serve(ballConfig, last_scorer)  # Pass the scorer
             scoring.reset_paddle_states()
             waiting_for_serve = True
             serve_timer = 30
@@ -461,10 +465,6 @@ while running:
     if waiting_for_serve:
         if serve_timer > 0:
             serve_timer -= 1
-        else:
-            waiting_for_serve = False
-            ball.bounce(1, 0)
-            ball.served = True
         
         # Process paddle inputs while waiting
         paddle1.process_keys(keys, dt)
@@ -473,6 +473,27 @@ while running:
         paddle2.process_swing(dt)
         paddle1.process_smash(dt)
         paddle2.process_smash(dt)
+        
+        # Check if a player hits the ball while waiting for serve
+        if ball.within_rect(paddle1.get_hitbox(), (0, 0)) and paddle1.can_hit_ball:
+            ball.bounce(1, paddle1.swingAngle)
+            ball.impulse((paddle1.velocity[0] * 0.01 * dt / 1000, paddle1.velocity[1] * 0.1 * dt / 1000, 0))
+            ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
+            paddle1.has_hit_ball = True
+            ball.served = True
+            waiting_for_serve = False
+            if chosen_card and chosen_card.is_Passive:
+                chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                
+        if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
+            ball.bounce(-1, paddle2.swingAngle)
+            ball.impulse((paddle2.velocity[0] * 0.01 * dt / 1000, paddle2.velocity[1] * 0.1 * dt / 1000, 0))
+            ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
+            paddle2.has_hit_ball = True
+            ball.served = True
+            waiting_for_serve = False
+            if chosen_card and chosen_card.is_Passive:
+                chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
     else:
         # ===== NORMAL GAME LOGIC =====
         paddle1.process_keys(keys, dt)
@@ -610,6 +631,33 @@ while running:
                 # Restore original max speed when ball is not going fast
                 ball.max_speed = ball.original_max_speed
    
+        if ball.within_rect(paddle1.get_hitbox(), (0, 0)) and paddle1.can_hit_ball:
+            if ball.get_velocity()[0] <= 0:
+                ball.bounce(1, paddle1.swingAngle)
+                ball.impulse((paddle1.velocity[0] * 0.01 * dt / 1000, paddle1.velocity[1] * 0.1 * dt / 1000, 0))
+                ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
+                paddle1.has_hit_ball = True
+                if chosen_card and chosen_card.is_Passive:
+                    chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
+                    paddle1.position = (paddle1.position[0] - 30, paddle1.position[1])
+                    
+        if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
+            if ball.get_velocity()[0] >= 0:
+                ball.bounce(-1, paddle2.swingAngle)
+                ball.impulse((paddle2.velocity[0] * 0.01 * dt / 1000, paddle2.velocity[1] * 0.1 * dt / 1000, 0))
+                ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
+                paddle2.has_hit_ball = True
+                if chosen_card and chosen_card.is_Passive:
+                    chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
+                    paddle2.position = (paddle2.position[0] + 30, paddle2.position[1])
+                    
+        ball.clamp_velocity()
+        
+        # Update ball physics - ONLY when game is active (not waiting for serve)
+        ball.update_position()
+    
     draw_table()
 
     paddle1.draw(screen=screen)

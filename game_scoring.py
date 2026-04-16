@@ -21,13 +21,29 @@ class GameScoring:
             return True, 1
         return False, None
         
-    def reset_ball_for_serve(self, ball_config):
-        # Reset ball position to paddle 1
-        self.ball.set_position(
-            self.paddle1.hitbox.right + self.ball.radius + 5,
-            self.paddle1.hitbox.centery,
-            ball_config['init_height']
-        )
+    def reset_ball_for_serve(self, ball_config, scorer=None):
+        """Reset ball on the loser's side (whoever didn't score)"""
+        if scorer == 1:
+            # Player 1 scored, so ball goes to Player 2's side (loser)
+            self.ball.set_position(
+                self.paddle2.hitbox.left - self.ball.radius - 5,
+                self.paddle2.hitbox.centery,
+                ball_config['init_height']
+            )
+        elif scorer == 2:
+            # Player 2 scored, so ball goes to Player 1's side (loser)
+            self.ball.set_position(
+                self.paddle1.hitbox.right + self.ball.radius + 5,
+                self.paddle1.hitbox.centery,
+                ball_config['init_height']
+            )
+        else:
+            # First serve of the game - ball goes to Player 1's side
+            self.ball.set_position(
+                self.paddle1.hitbox.right + self.ball.radius + 5,
+                self.paddle1.hitbox.centery,
+                ball_config['init_height']
+            )
         self.ball.set_velocity(0, 0, 0)
         self.ball.served = False
         
@@ -42,7 +58,7 @@ class GameScoring:
         self.paddle2.has_hit_ball = False
         
     def reset_for_new_round(self, paddle_config, ball_config, center_y, left_boundary, right_boundary):
-        self.reset_ball_for_serve(ball_config)
+        self.reset_ball_for_serve(ball_config, None)
         self.paddle1.position = (left_boundary + 50, center_y - paddle_config['Paddle_Height'] // 2)
         self.paddle2.position = (right_boundary - 50 - paddle_config['Paddle_Width'], center_y - paddle_config['Paddle_Height'] // 2)
         self.paddle1.set_hitbox_pos(0, 0)
