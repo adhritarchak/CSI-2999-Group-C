@@ -473,9 +473,7 @@ while running:
                 ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
                 ball.set_velocity(0, 0, 0)
                 ball.served = False
-        score_surface = font.render(f"Player {last_scorer} Scores!", True, (255, 255, 255))
-        score_rect = score_surface.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
-        screen.blit(score_surface, score_rect)
+        
     
     if ball.rally_active:
         ball.rally_timer -= dt
@@ -510,6 +508,11 @@ while running:
         shadow.draw(screen=screen)
         if shadow.get_height() <= 0:
             shadow_balls.remove(shadow)
+    if show_score:
+        score_surface = font.render(f"Player {last_scorer} Scores!", True, (255, 255, 255))
+        score_rect = score_surface.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
+        screen.blit(score_surface, score_rect)
+
 
     pygame.display.flip()
 
