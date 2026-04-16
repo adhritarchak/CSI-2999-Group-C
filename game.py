@@ -3,6 +3,8 @@ import sys
 from Pong import *
 pygame.init()
 from cards import cards
+from scoreboard import Scoreboard
+from game_scoring import GameScoring
 
 # Load config from JSON file
 with open('config.json') as f:
@@ -285,6 +287,7 @@ waiting_for_card = False
 current_player_selecting = None
 
 
+
 def draw_table():
     # Background
     screen.fill(colorConfig['Light Brown'])
@@ -341,36 +344,145 @@ paddle2_debuff_expired = False
 
 shadow_balls = []
 chosen_card = None
+
+# ===== SCORING SYSTEM =====
+scoreboard = Scoreboard(screen, font)
+
+scoring = GameScoring(
+    scoreboard, ball, paddle1, paddle2, 
+    {'left': Left_Boundary, 'right': Right_Boundary, 'top': Top_Boundary, 'bottom': Bot_Boundary}
+)
+
+waiting_for_serve = True
+serve_timer = 30
+# ===== END SCORING SYSTEM =====
+
 # actual game
 running = True
-while running: 
+waiting_for_serve = True
+while running:
+    dt = clock.tick(screenConfig['FPS'])
+    waiting_for_serve = True
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
             continue
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_c:  # Press C to open cards
-                chosen_card = draw_random_card(screen, font, 1)
-                if chosen_card:
-                    print("You picked: ", chosen_card.name)
-            if event.key == pygame.K_z and chosen_card is not None: # Press Z to activate the chosen card effect
-                   chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
-                   print("Activated card effect:", chosen_card.name)
-                   chosen_card = None  # Clear the chosen card after activation
-
-    dt = clock.tick(screenConfig['FPS'])
+            if event.key == pygame.K_ESCAPE:
+                running = False
+                continue
+            if event.key == pygame.K_c:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    chosen_card = draw_random_card(screen, font)
+                    if chosen_card:
+                        print("You picked: ", chosen_card.name)
+            if event.key == pygame.K_z and chosen_card is not None:
+                if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
+                    chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                    print("Activated card effect:", chosen_card.name)
+                    chosen_card = None
+            if event.key == pygame.K_SPACE:
+                if scoreboard.showing_round_end:
+                    # Start next round
+                    scoreboard.start_next_round()
+                    scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary)
+                    
+                    # Reset and serve ball immediately
+                    ball.set_position(
+                        paddle1.hitbox.right + ballConfig['Radius'] + 5,
+                        paddle1.hitbox.centery,
+                        ballConfig['init_height']
+                    )
+                    ball.set_velocity(0, 0, 0)
+                    ball.bounce(1, 0)
+                    ball.served = True
+                    
+                    waiting_for_serve = False
+                    chosen_card = None
+                    shadow_balls.clear()
+                    scoreboard.showing_round_end = False
+                    
+                elif scoreboard.showing_match_end:
+                    # Restart entire match
+                    scoreboard.reset_match()
+                    scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary)
+                    waiting_for_serve = True
+                    serve_timer = 30
+                    chosen_card = None
+                    shadow_balls.clear()
+                    ball.set_velocity(0, 0, 0)
+                    ball.served = False
+                    scoreboard.showing_match_end = False
+    
+    # ===== SHOW ROUND END SCREEN =====
+    if scoreboard.showing_round_end:
+        draw_table()
+        paddle1.draw(screen=screen)
+        paddle2.draw(screen=screen)
+        ball.draw(screen=screen)
+        for shadow in shadow_balls[:]:
+            shadow.draw(screen=screen)
+            if shadow.get_height() <= 0:
+                shadow_balls.remove(shadow)
+        scoreboard.draw_round_end()
+        pygame.display.flip()
+        continue
+    
+    # ===== SHOW MATCH END SCREEN =====
+    if scoreboard.match_over or scoreboard.showing_match_end:
+        draw_table()
+        paddle1.draw(screen=screen)
+        paddle2.draw(screen=screen)
+        ball.draw(screen=screen)
+        for shadow in shadow_balls[:]:
+            shadow.draw(screen=screen)
+            if shadow.get_height() <= 0:
+                shadow_balls.remove(shadow)
+        scoreboard.draw_match_end()
+        pygame.display.flip()
+        continue
+    
     keys = pygame.key.get_pressed()
     
-
-    paddle1.process_keys(keys, dt)
-    paddle2.process_keys(keys, dt)
-
+    # ===== CHECK FOR SCORING =====
+    scored, winner = scoring.check_score()
+    if scored:
+        print(f"SCORING EVENT - Winner: Player {winner}")
+        round_continues = scoreboard.add_point(winner)
+        if round_continues:
+            # Reset ball for next point
+            scoring.reset_ball_for_serve(ballConfig)
+            scoring.reset_paddle_states()
+            waiting_for_serve = True
+            serve_timer = 30
+        continue
     
-    paddle1.process_swing(dt)
-    paddle2.process_swing(dt)
+    # ===== HANDLE SERVE WAITING STATE =====
+    if waiting_for_serve:
+        if serve_timer > 0:
+            serve_timer -= 1
+        else:
+            waiting_for_serve = False
+            ball.bounce(1, 0)
+            ball.served = True
+        
+        # Process paddle inputs while waiting
+        paddle1.process_keys(keys, dt)
+        paddle2.process_keys(keys, dt)
+        paddle1.process_swing(dt)
+        paddle2.process_swing(dt)
+        paddle1.process_smash(dt)
+        paddle2.process_smash(dt)
+    else:
+        # ===== NORMAL GAME LOGIC =====
+        paddle1.process_keys(keys, dt)
+        paddle2.process_keys(keys, dt)
+        
+        paddle1.process_swing(dt)
+        paddle2.process_swing(dt)
 
-    paddle1.process_smash(dt)
-    paddle2.process_smash(dt)
+        paddle1.process_smash(dt)
+        paddle2.process_smash(dt)
 
    
     if paddle1.debuff_timer > 0:
@@ -497,6 +609,7 @@ while running:
             else:
                 # Restore original max speed when ball is not going fast
                 ball.max_speed = ball.original_max_speed
+   
     draw_table()
 
     paddle1.draw(screen=screen)
@@ -512,7 +625,8 @@ while running:
         score_surface = font.render(f"Player {last_scorer} Scores!", True, (255, 255, 255))
         score_rect = score_surface.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
         screen.blit(score_surface, score_rect)
-
+        
+    scoreboard.draw()
 
     pygame.display.flip()
 
