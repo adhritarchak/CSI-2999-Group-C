@@ -1,10 +1,12 @@
 import pygame
 import sys
+import json
 from Pong import *
-pygame.init()
 from cards import cards
 from scoreboard import Scoreboard
 from game_scoring import GameScoring
+
+pygame.init()
 
 # Load config from JSON file
 with open('config.json') as f:
@@ -35,17 +37,6 @@ Top_Boundary = Table_Rect.top
 Bot_Boundary = Table_Rect.bottom
 Center_x = Table_Rect.centerx
 Center_y = Table_Rect.centery
-
-
-Smash1_hold_time = 0
-Smash1_hit = False
-Smash1_hit_time = 0
-Smash1_active = False
-Smash2_hold_time = 0
-Smash2_active = False
-Smash_duration = 3000
-Smash2_hit = False
-Smash2_hit_time = 0
 
 
 #paddles setup
@@ -305,7 +296,7 @@ def draw_table():
         tableConfig['Midline_Thickness']
     )
 
-ball = Ball(x=paddle1.hitbox.right + ballConfig['Radius'] + 5, #Ball will start just to the right of paddle 1
+ball = Ball(x=paddle1.hitbox.right + ballConfig['Radius'] + 5, 
             y=paddle1.hitbox.centery,
             height=ballConfig['init_height'],
             vel_z=0,
@@ -355,7 +346,7 @@ current_player_selecting = None
 running = True
 while running:
     dt = clock.tick(screenConfig['FPS'])
-    waiting_for_serve = True
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -591,7 +582,7 @@ while running:
                 # Restore original max speed when ball is not going fast
                 ball.max_speed = ball.original_max_speed
    
-        if ball.within_rect(paddle1.get_hitbox(), (0, 0)) and paddle1.can_hit_ball:
+    if ball.within_rect(paddle1.get_hitbox(), (0, 0)) and paddle1.can_hit_ball:
             if ball.get_velocity()[0] <= 0:
                 ball.bounce(1, paddle1.swingAngle)
                 ball.impulse((paddle1.velocity[0] * 0.01 * dt / 1000, paddle1.velocity[1] * 0.1 * dt / 1000, 0))
@@ -602,7 +593,7 @@ while running:
                 if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
                     paddle1.position = (paddle1.position[0] - 30, paddle1.position[1])
                     
-        if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
+    if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
             if ball.get_velocity()[0] >= 0:
                 ball.bounce(-1, paddle2.swingAngle)
                 ball.impulse((paddle2.velocity[0] * 0.01 * dt / 1000, paddle2.velocity[1] * 0.1 * dt / 1000, 0))
@@ -613,10 +604,10 @@ while running:
                 if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
                     paddle2.position = (paddle2.position[0] + 30, paddle2.position[1])
                     
-        ball.clamp_velocity()
+    ball.clamp_velocity()
         
         # Update ball physics - ONLY when game is active (not waiting for serve)
-        ball.update_position()
+    ball.update_position()
     
     draw_table()
 
