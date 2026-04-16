@@ -5,6 +5,7 @@ from Pong import *
 from cards import cards
 from scoreboard import Scoreboard
 from game_scoring import GameScoring
+from cards import cards, PlayerCardInventory, draw_random_card, handle_inventory_selection, show_all_cards
 
 pygame.init()
 
@@ -60,215 +61,10 @@ paddle2.setKeys(pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT, pygam
 paddle1.setSwingConfig(paddleConfig['SwingBackTime'], paddleConfig['SwingForwardTime'], paddleConfig['SmashHoldtime'], paddleConfig['CooldownTime'])
 paddle2.setSwingConfig(paddleConfig['SwingBackTime'], paddleConfig['SwingForwardTime'], paddleConfig['SmashHoldtime'], paddleConfig['CooldownTime'])
 
-class PlayerCardInventory:
-    def __init__(self, max_slots=5, player_id = None):
-        self.cards = []  # List of Card objects
-        self.max_slots = max_slots
-        self.player_id = player_id
-
-    def add_card(self, card):
-        if len(self.cards) < self.max_slots:
-            self.cards.append(card)
-            card.owner = self.player_id
-            return True
-        return False
-    
-    def remove_card(self, index):
-        if 0 <= index < len(self.cards):
-            return self.cards.pop(index)
-        return None
-    
-    def swap_card(self, index, new_card):
-        if 0 <= index < len(self.cards):
-            old_card = self.cards[index]
-            self.cards[index] = new_card
-            new_card.owner = self.player_id
-            return old_card
-        return None
-    def get_card(self, index):
-        if 0 <= index < len(self.cards):
-            return self.cards[index]
-        return None
-    
-    def is_full(self):
-        return len(self.cards) >= self.max_slots
-    
-
-def draw_random_card(screen, font, player_id, num=3,is_swap=False, swap_index=None,):
-    selected_cards = random.sample(cards, num)
-
-    card_width = 200
-    card_height = 120
-    spacing = 50
-    transparency = 180
-
-    screen_width = screen.get_width()
-    screen_height = screen.get_height()
-
-    start_x = (screen_width - ((card_width * num) + spacing * (num - 1))) // 2
-    y_pos = screen_height // 2 - card_height // 2
-
-    inventory = player1_inventory if player_id == 1 else player2_inventory
-
-    card_rects = []
-    current_screen = screen.copy()
-
-    running = True
-    while running:
-        #screen.fill((30, 30, 30))
-        screen.blit(current_screen, (0, 0))
-
-        overlay = pg.Surface((screen_width, screen_height), pg.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))  # Semi-transparent overlay
-        screen.blit(overlay, (0, 0))
-
-        title_text = font.render(f"Player {player_id} - Choose a Card", True, (255, 255, 255))
-        title_rect = title_text.get_rect(center=(screen_width // 2, y_pos - 50))
-        screen.blit(title_text, title_rect)
-        
-        # Draw inventory info
-        inv_text = font.render(f"Your Cards: {len(inventory.cards)}/{inventory.max_slots}", True, (200, 200, 200))
-        inv_rect = inv_text.get_rect(topleft=(20, 20))
-        screen.blit(inv_text, inv_rect)
-        
-        # Draw inventory list
-        inv_y = 60
-        for i, card in enumerate(inventory.cards):
-            card_num_text = font.render(f"{i+1}. {card.name}", True, (200, 200, 200))
-            screen.blit(card_num_text, (30, inv_y + i * 25))
-
-        # Draw cards
-        for i, card in enumerate(selected_cards):
-            rect = pg.Rect(start_x + i * (card_width + spacing), y_pos, card_width, card_height)
-            card_rects.append(rect)
-            card_surface = pg.Surface((card_width, card_height), pg.SRCALPHA)
-
-            card_surface.fill((0,0,0,0))
-
-            pg.draw.rect(card_surface, (200, 200, 200, transparency), card_surface.get_rect(), border_radius= 10)
-            pg.draw.rect(card_surface, (0, 0, 0, transparency), card_surface.get_rect(), 3, border_radius=10)
-
-            text_surface = font.render(card.name, True, (0, 0, 0))
-            text_rect = text_surface.get_rect(center=card_surface.get_rect().center)
-            card_surface.blit(text_surface, text_rect)
-            screen.blit(card_surface, rect)
-
-        if is_swap:
-            inst_text = font.render("Click a card to swap it with your selected slot", True, (200, 200, 200))
-        elif inventory.is_full():
-            inst_text = font.render("Inventory full! Click a card to replace one of your existing cards", True, (200, 200, 200))
-        else:
-            inst_text = font.render("Click a card to add it to your inventory", True, (200, 200, 200))
-            inst_rect = inst_text.get_rect(center=(screen_width // 2, screen_height - 30))
-            screen.blit(inst_text, inst_rect)
-
-        pg.display.flip()
-
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                pg.quit()
-                return None
-
-            if event.type == pg.MOUSEBUTTONDOWN:
-                mouse_pos = pg.mouse.get_pos()
-
-                for i, rect in enumerate(card_rects):
-                    if rect.collidepoint(mouse_pos):
-                        if is_swap and swap_index is not None:
-                            # Swap cards
-                            inventory.swap_card(swap_index, selected_cards[i])
-                            print(f"Player {player_id} swapped card with {selected_cards[i].name}")
-                            return selected_cards[i]
-                        elif inventory.is_full():
-                            # Show inventory selection to replace a card
-                            return handle_inventory_selection(screen, font, player_id, selected_cards[i])
-                        else:
-                            # Just add the card
-                            inventory.add_card(selected_cards[i])
-                            print(f"Player {player_id} added {selected_cards[i].name} to inventory")
-                            return selected_cards[i]
-    
-    return None
-def handle_inventory_selection(screen, font, player_id, new_card):
-    '''Helper function to let player choose which card to replace when inventory is full'''
-    inventory = player1_inventory if player_id == 1 else player2_inventory
-    
-    card_width = 300
-    card_height = 60
-    spacing = 15
-    
-    screen_width = screen.get_width()
-    screen_height = screen.get_height()
-    
-    start_x = (screen_width - card_width) // 2
-    total_height = len(inventory.cards) * (card_height + spacing)
-    y_pos = screen_height // 2 - total_height // 2
-    
-    title_text = font.render(f"Inventory Full - Choose a card to replace", True, (255, 255, 255))
-    title_rect = title_text.get_rect(center=(screen_width // 2, y_pos - 50))
-    
-    new_card_text = font.render(f"New Card: {new_card.name}", True, (255, 255, 0))
-    new_card_rect = new_card_text.get_rect(center=(screen_width // 2, y_pos + total_height + 30))
-    
-    card_rects = []
-    current_screen = screen.copy()
-    running = True
-    while running:
-        screen.blit(current_screen, (0, 0))
-        
-        overlay = pg.Surface((screen_width, screen_height), pg.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        screen.blit(overlay, (0, 0))
-        
-        screen.blit(title_text, title_rect)
-        screen.blit(new_card_text, new_card_rect)
-        
-        for i, card in enumerate(inventory.cards):
-            rect = pg.Rect(start_x, y_pos + i * (card_height + spacing), card_width, card_height)
-            card_rects.append(rect)
-            
-            card_surface = pg.Surface((card_width, card_height), pg.SRCALPHA)
-            pg.draw.rect(card_surface, (200, 200, 200, 180), card_surface.get_rect(), border_radius=8)
-            pg.draw.rect(card_surface, (0, 0, 0, 180), card_surface.get_rect(), 3, border_radius=8)
-            
-            text_surface = font.render(f"{i+1}. {card.name}", True, (0, 0, 0))
-            text_rect = text_surface.get_rect(center=card_surface.get_rect().center)
-            card_surface.blit(text_surface, text_rect)
-            screen.blit(card_surface, rect)
-
-        cancel_rect = pg.Rect(start_x, y_pos + total_height + 60, card_width, 40)
-        pg.draw.rect(screen, (100, 100, 100, 180), cancel_rect, border_radius=8)
-        cancel_text = font.render("Cancel - Keep existing cards", True, (255, 255, 255))
-        cancel_text_rect = cancel_text.get_rect(center=cancel_rect.center)
-        screen.blit(cancel_text, cancel_text_rect)
-        
-        pg.display.flip()
-        
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                pg.quit()
-                return None
-            
-            if event.type == pg.MOUSEBUTTONDOWN:
-                mouse_pos = pg.mouse.get_pos()
-                
-                # Check inventory card clicks
-                for i, rect in enumerate(card_rects):
-                    if rect.collidepoint(mouse_pos):
-                        # Replace the clicked card with the new card
-                        old_card = inventory.swap_card(i, new_card)
-                        print(f"Player {player_id} replaced {old_card.name} with {new_card.name}")
-                        return new_card
-                if cancel_rect.collidepoint(mouse_pos):
-                    print(f"Player {player_id} cancelled card selection")
-                    return None
-    
-    return None
-
 
 # Player inventories
-player1_inventory = PlayerCardInventory(max_slots=5)
-player2_inventory = PlayerCardInventory(max_slots=5)
+player1_inventory = PlayerCardInventory(max_slots=5, player_id=1)
+player2_inventory = PlayerCardInventory(max_slots=5, player_id=2)
 
 
 def draw_table():
@@ -358,7 +154,7 @@ while running:
                 continue
             if event.key == pygame.K_c:
                 if not scoreboard.match_over and scoreboard.round_active and not scoreboard.showing_round_end:
-                    chosen_card = draw_random_card(screen, font, 1)
+                    chosen_card = show_all_cards(screen, font,1, player1_inventory)
                     if chosen_card:
                         print("You picked: ", chosen_card.name)
             #Player 1 uses 1,2,3,4,5 keys (left side of keyboard)
@@ -502,7 +298,11 @@ while running:
         losing_player = 2 if winner == 1 else 1
         #waiting_for_card = True
         #current_player_selecting = losing_player
-    
+        selected_card = draw_random_card(screen, font, losing_player, player1_inventory, player2_inventory)
+        if selected_card:
+                print(f"Player {losing_player} selected: {selected_card.name}")
+                
+
         round_continues = scoreboard.add_point(winner)
         if round_continues:
         # Reset ball for next point - ball appears on the LOSER's side
@@ -511,21 +311,9 @@ while running:
             waiting_for_serve = True
             serve_timer = 30
         else:
-            selected_card = draw_random_card(screen, font, losing_player)
-            if selected_card:
-                print(f"Player {losing_player} selected: {selected_card.name}")
-        # SHOW CARD SELECTION IMMEDIATELY AFTER SCORING
-           # if waiting_for_card and current_player_selecting:
-               # selected_card = draw_random_card(screen, font, current_player_selecting)
-               # if selected_card:
-               #     print(f"Player {current_player_selecting} selected: {selected_card.name}")
-               # if current_player_selecting == 1:
-               #     player1_inventory.add_card(selected_card)
-               # else:
-               #     player2_inventory.add_card(selected_card)
             scoreboard.start_next_round()
             scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary)
-            waiting_for_serve = True
+            waiting_for_serve = True    
             serve_timer = 30
             ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
             ball.set_velocity(0, 0, 0)

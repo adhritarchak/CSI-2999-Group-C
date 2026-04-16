@@ -14,14 +14,19 @@ class Card:
     effect_fn: callable
     effects: list[str]  # A list of effects to activate when the card is used, activated by getattr(). 
     is_Passive: bool     # Whether the card's effect is passive (always on) or active (activated by player)
+    owner: int          # 1 for player 1, 2 for player 2, None for unowned (e.g. in a deck or something)
+    used_this_round: bool  # Whether the card has been used this round, to prevent multiple uses of the same card in one round
+    cooldown_rounds: int  # Number of rounds before the card can be used again after being used
 
-    def __init__(self, name = "Card", effect_fn = None, cardType = CardTypes.Typeless, is_Passive=False, owner = None):
+    def __init__(self, name = "Card", effect_fn = None, cardType = CardTypes.Typeless, is_Passive=False, owner = None, cooldown_rounds = 1):
         self.name = name
         self.type = cardType
         self.effect_fn = effect_fn
         self.effects = []
         self.is_Passive = is_Passive
         self.owner = owner
+        self.used_this_round = False
+        self.cooldown_rounds = cooldown_rounds
 
     def activate(self, activator = None, **kwargs):
         '''The function to call when the card is used, which activates all of its effects. The caller parameter 
@@ -29,6 +34,21 @@ class Card:
         if self.effect_fn:
             kwargs['activator'] = activator
             self.effect_fn(**kwargs)
+    def can_use(self, current_round):
+        #if card can be used 
+        if self.is_Passive:
+            return True  
+        return self.rounds_left_on_cooldown <= 0
+    
+    def use_card(self):
+        #Mark as cooldownn till next round
+        if not self.is_Passive:
+            self.rounds_left_on_cooldown = self.cooldown_rounds
+    
+    def update_cooldown(self):
+        #Back to normal after cooldown
+        if self.rounds_left_on_cooldown > 0:
+            self.rounds_left_on_cooldown -= 1
 
 class Deck:
     '''Stack for cards, has both a draw and discard pile for the cards.'''
@@ -114,16 +134,16 @@ def arc_strike_effect(ball, activator=None, **kwargs):
     if activator == 1:  # paddle1 activated it
         print("Player 1 used Arc Strike!")
         vel = ball.get_velocity()
-        if vel[X] > 0:  # ball moving right, paddle1 last hit it
+        if vel[X] > 0:  
             ball.spin = 0.15  # curve right
-        else:  # ball moving left, paddle2 last hit it
+        else: 
             ball.spin = -0.15  # curve left
     elif activator == 2:  # paddle2 activated it
         print("Player 2 used Arc Strike!")
         vel = ball.get_velocity()
-        if vel[X] < 0:  # ball moving left, paddle2 last hit it
+        if vel[X] < 0:  
             ball.spin = -0.15  # curve left
-        else:  # ball moving right, paddle1 last hit it
+        else:  
             ball.spin = 0.15  # curve right
 
 def bigger_is_better_effect(paddle1, paddle2, activator=None, **kwargs):
@@ -191,11 +211,11 @@ def gravitational_pull_effect(ball, paddle1, paddle2, activator=None, **kwargs):
     vel = ball.get_velocity()
     pos = ball.get_position()
     
-    if activator == 1:  # Paddle1 activated - pull ball toward left
+    if activator == 1:  
         if vel[0] > 0 and pos[0] > paddle1.hitbox.right:
             ball.set_velocity(vel[0] * 0.5, vel[1], vel[2])
             ball.spin = -0.3
-    else:  # Paddle2 activated - pull ball toward right
+    else:  
         if vel[0] < 0 and pos[0] < paddle2.hitbox.left:
             ball.set_velocity(vel[0] * 0.5, vel[1], vel[2])
             ball.spin = 0.3
@@ -263,15 +283,424 @@ cards = [
           Card("Low impact", low_impact_effect, is_Passive=True), #cards[4]
           Card("High impact", high_impact_effect, is_Passive=True), #cards[5]
           Card("Shrink", shrink_effect), #cards[6]
-          Card("Rally", rally_effect,  is_Passive=True),
-          Card("Gravitational Pull",gravitational_pull_effect),
-          Card("Smaller Paddle", smaller_paddle_effect),
-          Card("Extra Weight", extra_weight_effect),
-          Card("AntiGravity", anti_gravity_effect),
-          Card("No Strength", no_strength_effect),
-          Card("Disruption", disruption_effect),
-          Card("Delay", delay_effect),
-          Card("Weakened", weakened_effect),
-          Card("Exhaustion", exhaustion_effect),
+          Card("Rally", rally_effect,  is_Passive=True), #cards[7]
+          Card("Gravitational Pull",gravitational_pull_effect), #cards[8]
+          Card("Smaller Paddle", smaller_paddle_effect),  #cards[9]
+          Card("Extra Weight", extra_weight_effect), #cards[10]
+          Card("AntiGravity", anti_gravity_effect), #cards[11]
+          Card("No Strength", no_strength_effect), #cards[12]
+          Card("Disruption", disruption_effect), #cards[13]
+          Card("Delay", delay_effect),  #cards[14]
+          Card("Weakened", weakened_effect), #cards[15]
+          Card("Exhaustion", exhaustion_effect), #cards[16
 ]
 card_count = 0
+
+class PlayerCardInventory:
+    def __init__(self, max_slots=5, player_id=None):
+        self.cards = []
+        self.max_slots = max_slots
+        self.player_id = player_id
+        self.card_names = set()
+
+    def add_card(self, card):
+        if card.name in self.card_names:
+            print(f"Player {self.player_id} already has {card.name} in inventory. Cannot add duplicate cards.")
+            return False
+        
+        if len(self.cards) < self.max_slots:
+            self.cards.append(card)
+            card.owner = self.player_id
+            return True
+        return False
+    
+    def remove_card(self, index):
+        if 0 <= index < len(self.cards):
+            return self.cards.pop(index)
+        return None
+    
+    def swap_card(self, index, new_card):
+        if 0 <= index < len(self.cards):
+            if new_card.name in self.card_names:
+                print(f"Player {self.player_id} already has {new_card.name}! Cannot swap with duplicate.")
+                return None
+            old_card = self.cards[index]
+            self.cards[index] = new_card
+            self.card_names.discard(old_card.name)
+            self.card_names.add(new_card.name)
+            new_card.owner = self.player_id
+            return old_card
+        return None
+    
+    def get_card(self, index):
+        if 0 <= index < len(self.cards):
+            return self.cards[index]
+        return None
+    def has_card(self, card_name):
+        return card_name in self.card_names
+    
+    def is_full(self):
+        return len(self.cards) >= self.max_slots
+
+def handle_inventory_selection(screen, font, player_id, player1_inventory, player2_inventory, new_card):
+    inventory = player1_inventory if player_id == 1 else player2_inventory
+    
+    card_width = 300
+    card_height = 60
+    spacing = 15
+    
+    screen_width = screen.get_width()
+    screen_height = screen.get_height()
+    
+    start_x = (screen_width - card_width) // 2
+    total_height = len(inventory.cards) * (card_height + spacing)
+    y_pos = screen_height // 2 - total_height // 2
+    
+    title_text = font.render(f"Inventory Full - Choose a card to replace", True, (255, 255, 255))
+    title_rect = title_text.get_rect(center=(screen_width // 2, y_pos - 50))
+    
+    new_card_text = font.render(f"New Card: {new_card.name}", True, (255, 255, 0))
+    new_card_rect = new_card_text.get_rect(center=(screen_width // 2, y_pos + total_height + 30))
+    
+    card_rects = []
+    current_screen = screen.copy()
+    running = True
+    while running:
+        screen.blit(current_screen, (0, 0))
+        overlay = pg.Surface((screen_width, screen_height), pg.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        screen.blit(overlay, (0, 0))
+        screen.blit(title_text, title_rect)
+        screen.blit(new_card_text, new_card_rect)
+        
+        for i, card in enumerate(inventory.cards):
+            rect = pg.Rect(start_x, y_pos + i * (card_height + spacing), card_width, card_height)
+            card_rects.append(rect)
+            card_surface = pg.Surface((card_width, card_height), pg.SRCALPHA)
+            pg.draw.rect(card_surface, (200, 200, 200, 180), card_surface.get_rect(), border_radius=8)
+            pg.draw.rect(card_surface, (0, 0, 0, 180), card_surface.get_rect(), 3, border_radius=8)
+            text_surface = font.render(f"{i+1}. {card.name}", True, (0, 0, 0))
+            text_rect = text_surface.get_rect(center=card_surface.get_rect().center)
+            card_surface.blit(text_surface, text_rect)
+            screen.blit(card_surface, rect)
+        
+        cancel_rect = pg.Rect(start_x, y_pos + total_height + 60, card_width, 40)
+        pg.draw.rect(screen, (100, 100, 100, 180), cancel_rect, border_radius=8)
+        cancel_text = font.render("Cancel - Keep existing cards", True, (255, 255, 255))
+        cancel_text_rect = cancel_text.get_rect(center=cancel_rect.center)
+        screen.blit(cancel_text, cancel_text_rect)
+        pg.display.flip()
+        
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                return None
+            if event.type == pg.MOUSEBUTTONDOWN:
+                mouse_pos = pg.mouse.get_pos()
+                for i, rect in enumerate(card_rects):
+                    if rect.collidepoint(mouse_pos):
+                        # Check if player already has the new card
+                        if new_card.name in inventory.card_names:
+                            print(f"Player {player_id} already has {new_card.name}! Cannot add duplicate.")
+                            return None
+                        old_card = inventory.swap_card(i, new_card)
+                        print(f"Player {player_id} replaced {old_card.name} with {new_card.name}")
+                        return new_card
+                for i, rect in enumerate(card_rects):
+                    if rect.collidepoint(mouse_pos):
+                        old_card = inventory.swap_card(i, new_card)
+                        print(f"Player {player_id} replaced {old_card.name} with {new_card.name}")
+                        return new_card
+                if cancel_rect.collidepoint(mouse_pos):
+                    print(f"Player {player_id} cancelled card selection")
+                    return None
+    return None
+
+def handle_inventory_selection_for_all_cards(screen, font, player_id, inventory, new_card):
+    card_width = 300
+    card_height = 60
+    spacing = 15
+    
+    screen_width = screen.get_width()
+    screen_height = screen.get_height()
+    
+    start_x = (screen_width - card_width) // 2
+    total_height = len(inventory.cards) * (card_height + spacing)
+    y_pos = screen_height // 2 - total_height // 2
+    
+    title_text = font.render(f"Inventory Full - Choose a card to replace", True, (255, 255, 255))
+    title_rect = title_text.get_rect(center=(screen_width // 2, y_pos - 50))
+    
+    new_card_text = font.render(f"New Card: {new_card.name}", True, (255, 255, 0))
+    new_card_rect = new_card_text.get_rect(center=(screen_width // 2, y_pos + total_height + 30))
+    
+    card_rects = []
+    current_screen = screen.copy()
+    running = True
+    while running:
+        screen.blit(current_screen, (0, 0))
+        overlay = pg.Surface((screen_width, screen_height), pg.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        screen.blit(overlay, (0, 0))
+        screen.blit(title_text, title_rect)
+        screen.blit(new_card_text, new_card_rect)
+        
+        for i, card in enumerate(inventory.cards):
+            rect = pg.Rect(start_x, y_pos + i * (card_height + spacing), card_width, card_height)
+            card_rects.append(rect)
+            card_surface = pg.Surface((card_width, card_height), pg.SRCALPHA)
+            pg.draw.rect(card_surface, (200, 200, 200, 180), card_surface.get_rect(), border_radius=8)
+            pg.draw.rect(card_surface, (0, 0, 0, 180), card_surface.get_rect(), 3, border_radius=8)
+            text_surface = font.render(f"{i+1}. {card.name}", True, (0, 0, 0))
+            text_rect = text_surface.get_rect(center=card_surface.get_rect().center)
+            card_surface.blit(text_surface, text_rect)
+            screen.blit(card_surface, rect)
+        
+        cancel_rect = pg.Rect(start_x, y_pos + total_height + 60, card_width, 40)
+        pg.draw.rect(screen, (100, 100, 100, 180), cancel_rect, border_radius=8)
+        cancel_text = font.render("Cancel - Keep existing cards", True, (255, 255, 255))
+        cancel_text_rect = cancel_text.get_rect(center=cancel_rect.center)
+        screen.blit(cancel_text, cancel_text_rect)
+        pg.display.flip()
+        
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                return None
+            if event.type == pg.MOUSEBUTTONDOWN:
+                mouse_pos = pg.mouse.get_pos()
+                for i, rect in enumerate(card_rects):
+                    if rect.collidepoint(mouse_pos):
+                        old_card = inventory.swap_card(i, new_card)
+                        print(f"Player {player_id} replaced {old_card.name} with {new_card.name}")
+                        return new_card
+                if cancel_rect.collidepoint(mouse_pos):
+                    print(f"Player {player_id} cancelled card selection")
+                    return None
+    return None
+
+def draw_random_card(screen, font, player_id, player1_inventory, player2_inventory, num=3, is_swap=False, swap_index=None):
+    from cards import cards
+    
+    inventory = player1_inventory if player_id == 1 else player2_inventory
+
+    available_cards = [card for card in cards if card.name not in inventory.card_names]
+    
+    if len(available_cards) == 0:
+        print(f"Player {player_id} has all cards already!")
+        # Show message on screen
+        screen_copy = screen.copy()
+        screen.blit(screen_copy, (0, 0))
+        overlay = pg.Surface((screen.get_width(), screen.get_height()), pg.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        screen.blit(overlay, (0, 0))
+        msg_text = font.render("You already have all cards!", True, (255, 200, 100))
+        msg_rect = msg_text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
+        screen.blit(msg_text, msg_rect)
+        pg.display.flip()
+        pg.time.wait(1500)
+        return None
+    
+   
+    if len(available_cards) < num:
+        selected_cards = available_cards
+    else:
+        selected_cards = random.sample(available_cards, num)
+
+
+    selected_cards = random.sample(cards, num)
+    
+    card_width = 200
+    card_height = 120
+    spacing = 50
+    transparency = 180
+    
+    screen_width = screen.get_width()
+    screen_height = screen.get_height()
+    
+    start_x = (screen_width - ((card_width * num) + spacing * (num - 1))) // 2
+    y_pos = screen_height // 2 - card_height // 2
+    
+    inventory = player1_inventory if player_id == 1 else player2_inventory
+    
+    card_rects = []
+    current_screen = screen.copy()
+    
+    running = True
+    while running:
+        screen.blit(current_screen, (0, 0))
+        
+        overlay = pg.Surface((screen_width, screen_height), pg.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        screen.blit(overlay, (0, 0))
+        
+        title_text = font.render(f"Player {player_id} - Choose a Card", True, (255, 255, 255))
+        title_rect = title_text.get_rect(center=(screen_width // 2, y_pos - 50))
+        screen.blit(title_text, title_rect)
+        
+        inv_text = font.render(f"Your Cards: {len(inventory.cards)}/{inventory.max_slots}", True, (200, 200, 200))
+        inv_rect = inv_text.get_rect(topleft=(20, 20))
+        screen.blit(inv_text, inv_rect)
+        
+        inv_y = 60
+        for i, card in enumerate(inventory.cards):
+            card_num_text = font.render(f"{i+1}. {card.name}", True, (200, 200, 200))
+            screen.blit(card_num_text, (30, inv_y + i * 25))
+        
+        for i, card in enumerate(selected_cards):
+            rect = pg.Rect(start_x + i * (card_width + spacing), y_pos, card_width, card_height)
+            card_rects.append(rect)
+            card_surface = pg.Surface((card_width, card_height), pg.SRCALPHA)
+            card_surface.fill((0,0,0,0))
+            pg.draw.rect(card_surface, (200, 200, 200, transparency), card_surface.get_rect(), border_radius=10)
+            pg.draw.rect(card_surface, (0, 0, 0, transparency), card_surface.get_rect(), 3, border_radius=10)
+            text_surface = font.render(card.name, True, (0, 0, 0))
+            text_rect = text_surface.get_rect(center=card_surface.get_rect().center)
+            card_surface.blit(text_surface, text_rect)
+            screen.blit(card_surface, rect)
+        
+        if is_swap:
+            inst_text = font.render("Click a card to swap it with your selected slot", True, (200, 200, 200))
+        elif inventory.is_full():
+            inst_text = font.render("Inventory full! Click a card to replace one of your existing cards", True, (200, 200, 200))
+        else:
+            inst_text = font.render("Click a card to add it to your inventory", True, (200, 200, 200))
+            inst_rect = inst_text.get_rect(center=(screen_width // 2, screen_height - 30))
+            screen.blit(inst_text, inst_rect)
+        
+        pg.display.flip()
+        
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                return None
+            
+            if event.type == pg.MOUSEBUTTONDOWN:
+                mouse_pos = pg.mouse.get_pos()
+                for i, rect in enumerate(card_rects):
+                    if rect.collidepoint(mouse_pos):
+                        if is_swap and swap_index is not None:
+                            inventory.swap_card(swap_index, selected_cards[i])
+                            print(f"Player {player_id} swapped card with {selected_cards[i].name}")
+                            return selected_cards[i]
+                        elif inventory.is_full():
+                            return handle_inventory_selection(screen, font, player_id, player1_inventory, player2_inventory, selected_cards[i])
+                        else:
+                            inventory.add_card(selected_cards[i])
+                            print(f"Player {player_id} added {selected_cards[i].name} to inventory")
+                            return selected_cards[i]
+    return None
+#Function to pull up all card effects for testing purposes
+def show_all_cards(screen, font, player_id, player_inventory):
+    """Shows all available cards for debugging/selection"""
+    from cards import cards
+    
+    available_cards = [card for card in cards if card.name not in player_inventory.card_names]
+
+    if len(available_cards) == 0:
+        print(f"Player {player_id} has all cards already!")
+        screen_copy = screen.copy()
+        screen.blit(screen_copy, (0, 0))
+        overlay = pg.Surface((screen.get_width(), screen.get_height()), pg.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        screen.blit(overlay, (0, 0))
+        msg_text = font.render("You already have all cards!", True, (255, 200, 100))
+        msg_rect = msg_text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
+        screen.blit(msg_text, msg_rect)
+        pg.display.flip()
+        pg.time.wait(1500)
+        return None
+    
+    # Use available_cards instead of all cards
+    all_cards = available_cards
+
+
+    all_cards = cards
+    
+    card_width = 200
+    card_height = 120
+    cols = 5
+    spacing = 5
+    transparency = 180
+    
+    screen_width = screen.get_width()
+    screen_height = screen.get_height()
+    
+    total_width = cols * card_width + (cols - 1) * spacing
+    start_x = (screen_width - total_width) // 2
+    start_y = 100
+    
+    current_screen = screen.copy()
+    
+    running = True
+    while running:
+        screen.blit(current_screen, (0, 0))
+        overlay = pg.Surface((screen_width, screen_height), pg.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        screen.blit(overlay, (0, 0))
+        
+        title_text = font.render(f"Player {player_id} - ALL CARDS (Debug)", True, (255, 255, 0))
+        title_rect = title_text.get_rect(center=(screen_width // 2, 50))
+        screen.blit(title_text, title_rect)
+        
+        card_rects = []
+        for i, card in enumerate(all_cards):
+            row = i // cols
+            col = i % cols
+            x = start_x + col * (card_width + spacing)
+            y = start_y + row * (card_height + spacing)
+            if y + card_height > screen_height:
+                break
+            rect = pg.Rect(x, y, card_width, card_height)
+            card_rects.append((rect, card))
+            card_surface = pg.Surface((card_width, card_height), pg.SRCALPHA)
+            card_surface.fill((0, 0, 0, 0))
+            pg.draw.rect(card_surface, (200, 200, 200, transparency), card_surface.get_rect(), border_radius=10)
+            pg.draw.rect(card_surface, (0, 0, 0, transparency), card_surface.get_rect(), 3, border_radius=10)
+            text_surface = font.render(card.name, True, (0, 0, 0))
+            text_rect = text_surface.get_rect(center=card_surface.get_rect().center)
+            card_surface.blit(text_surface, text_rect)
+            screen.blit(card_surface, rect)
+        
+        # Show different instructions based on inventory status
+        if player_inventory.is_full():
+            inst_text = font.render("INVENTORY FULL! Click a card to REPLACE an existing card", True, (255, 200, 100))
+        else:
+            inst_text = font.render("Click a card to add it to your inventory", True, (200, 200, 200))
+        inst_rect = inst_text.get_rect(center=(screen_width // 2, screen_height - 50))
+        screen.blit(inst_text, inst_rect)
+        
+        inv_text = font.render(f"Inventory: {len(player_inventory.cards)}/{player_inventory.max_slots}", True, (255, 255, 255))
+        inv_rect = inv_text.get_rect(topleft=(20, 20))
+        screen.blit(inv_text, inv_rect)
+        
+        # Draw current inventory cards if full (for replacement)
+        if player_inventory.is_full():
+            inv_title = font.render("Your cards (click to replace):", True, (255, 200, 100))
+            screen.blit(inv_title, (20, 50))
+            for i, card in enumerate(player_inventory.cards):
+                card_text = font.render(f"{i+1}. {card.name}", True, (200, 200, 200))
+                screen.blit(card_text, (30, 80 + i * 25))
+        
+        pg.display.flip()
+        
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                return None
+            
+            if event.type == pg.MOUSEBUTTONDOWN:
+                mouse_pos = pg.mouse.get_pos()
+                for rect, card in card_rects:
+                    if rect.collidepoint(mouse_pos):
+                        if player_inventory.is_full():
+                            # Inventory full - show replacement selection
+                            return handle_inventory_selection_for_all_cards(screen, font, player_id, player_inventory, card)
+                        else:
+                            # Inventory has space - just add
+                            if player_inventory.add_card(card):
+                                print(f"Player {player_id} added {card.name} to inventory")
+                            else:
+                                print(f"Failed to add {card.name}")
+                            return card
+    return None
