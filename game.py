@@ -278,15 +278,6 @@ def handle_inventory_selection(screen, font, player_id, new_card):
 player1_inventory = PlayerCardInventory(max_slots=5)
 player2_inventory = PlayerCardInventory(max_slots=5)
 
-# Scoring system
-score_timer = 0
-score_display_time = 2000  # Show score for 2 seconds
-show_score = False
-last_scorer = None
-waiting_for_card = False
-current_player_selecting = None
-
-
 
 def draw_table():
     # Background
@@ -356,6 +347,8 @@ scoring = GameScoring(
 waiting_for_serve = True
 serve_timer = 30
 last_scorer = None  # Track who scored last to determine server
+waiting_for_card = False
+current_player_selecting = None
 # ===== END SCORING SYSTEM =====
 
 # actual game
@@ -410,7 +403,6 @@ while running:
                     scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary)
                     waiting_for_serve = True
                     serve_timer = 30
-                    chosen_card = None
                     shadow_balls.clear()
                     ball.set_velocity(0, 0, 0)
                     ball.served = False
@@ -429,6 +421,16 @@ while running:
                 shadow_balls.remove(shadow)
         scoreboard.draw_round_end()
         pygame.display.flip()
+        if waiting_for_card and current_player_selecting:
+            selected_card = draw_random_card(screen, font, current_player_selecting)
+            if selected_card:
+                print(f"Player {current_player_selecting} selected: {selected_card.name}")
+                waiting_for_card = False
+                current_player_selecting = None
+                # Reset ball for next point
+                ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
+                ball.set_velocity(0, 0, 0)
+                ball.served = False
         continue
     
     # ===== SHOW MATCH END SCREEN =====
@@ -441,6 +443,7 @@ while running:
             shadow.draw(screen=screen)
             if shadow.get_height() <= 0:
                 shadow_balls.remove(shadow)
+        chosen_card = None
         scoreboard.draw_match_end()
         pygame.display.flip()
         continue
@@ -552,6 +555,7 @@ while running:
                 chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
             if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7:
                 paddle1.position = (paddle1.position[X] - 30, paddle1.position[Y]) #Should push paddle when returning a smash
+
     if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
         if ball.get_velocity()[X] >= 0:
             ball.bounce(-1, paddle2.swingAngle)
@@ -591,21 +595,7 @@ while running:
             ball.served = False
 
 # Handle score display and card selection
-    if show_score:
-        current_time = pg.time.get_ticks()
-        if current_time - score_timer >= score_display_time:
-            show_score = False
-        # Show card selection for the player who lost the point
-        if waiting_for_card and current_player_selecting:
-            selected_card = draw_random_card(screen, font, current_player_selecting)
-            if selected_card:
-                print(f"Player {current_player_selecting} selected: {selected_card.name}")
-                waiting_for_card = False
-                current_player_selecting = None
-                # Reset ball for next point
-                ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
-                ball.set_velocity(0, 0, 0)
-                ball.served = False
+    
         
     
     if ball.rally_active:
@@ -669,11 +659,7 @@ while running:
         shadow.draw(screen=screen)
         if shadow.get_height() <= 0:
             shadow_balls.remove(shadow)
-    if show_score:
-        score_surface = font.render(f"Player {last_scorer} Scores!", True, (255, 255, 255))
-        score_rect = score_surface.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
-        screen.blit(score_surface, score_rect)
-        
+   
     scoreboard.draw()
 
     pygame.display.flip()
