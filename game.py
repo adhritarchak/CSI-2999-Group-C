@@ -353,7 +353,6 @@ current_player_selecting = None
 
 # actual game
 running = True
-waiting_for_serve = True
 while running:
     dt = clock.tick(screenConfig['FPS'])
     waiting_for_serve = True
@@ -568,35 +567,6 @@ while running:
                 paddle2.position = (paddle2.position[X] + 30, paddle2.position[Y])
     ball.clamp_velocity()
 
-    if ball.get_position()[0] < Left_Boundary:
-    # Player 2 scores
-        if not waiting_for_card and not show_score:
-            show_score = True
-            last_scorer = 2
-            score_timer = pg.time.get_ticks()
-            waiting_for_card = True
-            current_player_selecting = 2
-            # Reset ball position
-            ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
-            ball.set_velocity(0, 0, 0)
-            ball.served = False
-        
-    elif ball.get_position()[0] > Right_Boundary:
-    # Player 1 scores
-        if not waiting_for_card and not show_score:
-            show_score = True
-            last_scorer = 1
-            score_timer = pg.time.get_ticks()
-            waiting_for_card = True
-            current_player_selecting = 1
-            # Reset ball position
-            ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
-            ball.set_velocity(0, 0, 0)
-            ball.served = False
-
-# Handle score display and card selection
-    
-        
     
     if ball.rally_active:
         ball.rally_timer -= dt
