@@ -15,17 +15,19 @@ class Card:
     effects: list[str]  # A list of effects to activate when the card is used, activated by getattr(). 
     is_Passive: bool     # Whether the card's effect is passive (always on) or active (activated by player)
 
-    def __init__(self, name = "Card", effect_fn = None, cardType = CardTypes.Typeless, is_Passive=False):
+    def __init__(self, name = "Card", effect_fn = None, cardType = CardTypes.Typeless, is_Passive=False, owner = None):
         self.name = name
         self.type = cardType
         self.effect_fn = effect_fn
         self.effects = []
         self.is_Passive = is_Passive
+        self.owner = owner
 
-    def activate(self, **kwargs):
+    def activate(self, activator = None, **kwargs):
         '''The function to call when the card is used, which activates all of its effects. The caller parameter 
         is the object that will call the effects.'''
         if self.effect_fn:
+            kwargs['activator'] = activator
             self.effect_fn(**kwargs)
 
 class Deck:
@@ -106,67 +108,149 @@ def loadDeck(pathname: str) -> Deck:
 def set_velocity(self, vx, vy, vz):
     Ball.set_velocity((vx, vy, vz))
         
-def arc_strike_effect(ball, **kwargs):
-        print("Arc Strike activated!")
+
+
+def arc_strike_effect(ball, activator=None, **kwargs):
+    if activator == 1:  # paddle1 activated it
+        print("Player 1 used Arc Strike!")
         vel = ball.get_velocity()
-        if vel[X] > 0:                  # ball moving right, paddle1 last hit it
-            ball.spin = 0.15             # curve right
-        else:                           # ball moving left, paddle2 last hit it
-            ball.spin = -0.15            # curve left
+        if vel[X] > 0:  # ball moving right, paddle1 last hit it
+            ball.spin = 0.15  # curve right
+        else:  # ball moving left, paddle2 last hit it
+            ball.spin = -0.15  # curve left
+    elif activator == 2:  # paddle2 activated it
+        print("Player 2 used Arc Strike!")
+        vel = ball.get_velocity()
+        if vel[X] < 0:  # ball moving left, paddle2 last hit it
+            ball.spin = -0.15  # curve left
+        else:  # ball moving right, paddle1 last hit it
+            ball.spin = 0.15  # curve right
 
-
-def bigger_is_better_effect(paddle1, paddle2, **kwargs):
-        print("Bigger is better activated!")
+def bigger_is_better_effect(paddle1, paddle2, activator=None, **kwargs):
+    print(f"Player {activator} used Bigger is Better!")
+    if activator == 1:
         paddle1.hitbox.width = int(paddle1.hitbox.width * 1.5)
         paddle1.hitbox.height = int(paddle1.hitbox.height * 1.5)
+    else:
         paddle2.hitbox.width = int(paddle2.hitbox.width * 1.5)
         paddle2.hitbox.height = int(paddle2.hitbox.height * 1.5)
-            
 
-def bring_it_back_effect(ball, paddle1, paddle2, **kwargs):
-        print("Bring it back activated!")
-        vel = ball.get_velocity()
-        ball.set_velocity(-vel[X], vel[Y], vel[2])
+def bring_it_back_effect(ball, activator=None, **kwargs):
+    print(f"Player {activator} used Bring it Back!")
+    vel = ball.get_velocity()
+    ball.set_velocity(-vel[0], vel[1], vel[2])
 
-def shadow_clone_effect(ball, shadow_balls, **kwargs):
-        print("Shadow Clone activated!")
-        vel = ball.get_velocity()
-        pos = ball.get_position()
-        bounds = ball.get_bounds()
-        print("Shadow Clone activated!")
-        print(f"shadow_balls before: {len(shadow_balls)}")
-    # Create a shadow ball with slight drift
-        shadow = Ball(
+def shadow_clone_effect(ball, shadow_balls, activator=None, **kwargs):
+    print(f"Player {activator} used Shadow Clone!")
+    vel = ball.get_velocity()
+    pos = ball.get_position()
+    bounds = ball.get_bounds()
+    
+    shadow = Ball(
         x=pos[0], y=pos[1],
         height=ball.get_height(),
         vel_z=vel[2],
         speed_x=vel[0],
-        speed_y=vel[1] + 3,  # slight drift
+        speed_y=vel[1] + (3 if activator == 1 else -3),  # slight drift based on activator
         radius=ball.radius,
         spin=ball.spin,
         chosen_card=None,
         max_speed=ball.max_speed
     )
-        shadow.set_bounds(top=bounds[0], bottom=bounds[1], left=bounds[2],right=bounds[3] )
-        shadow.is_shadow = True  # Mark as fake
-        shadow_balls.append(shadow)
-        print(f"After: {len(shadow_balls)} shadows")
+    shadow.set_bounds(top=bounds[0], bottom=bounds[1], left=bounds[2], right=bounds[3])
+    shadow.is_shadow = True
+    shadow_balls.append(shadow)
 
-def low_impact_effect(ball, **kwargs):
-        print("Low impact activated!")
-        vel = ball.get_velocity()
-        if abs(vel[X]) >= ball.max_speed * 0.7:  # only boost if incoming ball is a smash
-            ball.set_velocity(vel[X] * 2.0, vel[Y], vel[2])
-    
+def low_impact_effect(ball, activator=None, **kwargs):
+    print(f"Player {activator} used Low Impact!")
+    vel = ball.get_velocity()
+    if abs(vel[0]) >= ball.max_speed * 0.7:
+        ball.set_velocity(vel[0] * 2.0, vel[1], vel[2])
 
-def high_impact_effect(ball, paddle1, paddle2, **kwargs):
-        print("High impact activated!")
+def high_impact_effect(paddle1, paddle2, activator=None, **kwargs):
+    print(f"Player {activator} used High Impact!")
+    if activator == 1:
         paddle1.smashPower = min(paddle1.smashPower * 1.5, 1.0)
+    else:
         paddle2.smashPower = min(paddle2.smashPower * 1.5, 1.0)
 
-def shrink_effect(ball, **kwargs):
-        print("Shrink activated!")
-        ball.radius = max(4, ball.radius - 3)
+def shrink_effect(ball, activator=None, **kwargs):
+    print(f"Player {activator} used Shrink!")
+    ball.radius = max(4, ball.radius - 3)
+
+def rally_effect(ball, activator=None, **kwargs):
+    print(f"Player {activator} used Rally!")
+    ball.rally_active = True
+    ball.rally_timer = 10000  # 10 seconds in milliseconds
+    ball.rally_activator = activator
+    ball.rally_slow_factor = 0.6  # Slow to 60% of speed
+    ball.rally_speed_threshold = 7.0  
+
+def gravitational_pull_effect(ball, paddle1, paddle2, activator=None, **kwargs):
+    print(f"Player {activator} used Gravitational Pull!")
+    vel = ball.get_velocity()
+    pos = ball.get_position()
+    
+    if activator == 1:  # Paddle1 activated - pull ball toward left
+        if vel[0] > 0 and pos[0] > paddle1.hitbox.right:
+            ball.set_velocity(vel[0] * 0.5, vel[1], vel[2])
+            ball.spin = -0.3
+    else:  # Paddle2 activated - pull ball toward right
+        if vel[0] < 0 and pos[0] < paddle2.hitbox.left:
+            ball.set_velocity(vel[0] * 0.5, vel[1], vel[2])
+            ball.spin = 0.3
+
+# Nerf effects (target opponent)
+def smaller_paddle_effect(paddle1, paddle2, activator=None, **kwargs):
+    print(f"Player {activator} used Smaller Paddle on opponent!")
+    if activator == 1:
+        paddle2.hitbox.width = max(20, paddle2.hitbox.width // 2)
+        paddle2.hitbox.height = max(20, paddle2.hitbox.height // 2)
+    else:
+        paddle1.hitbox.width = max(20, paddle1.hitbox.width // 2)
+        paddle1.hitbox.height = max(20, paddle1.hitbox.height // 2)
+
+def extra_weight_effect(paddle1, paddle2, activator=None, **kwargs):
+    print(f"Player {activator} used Extra Weight on opponent!")
+    target = paddle2 if activator == 1 else paddle1
+    target.speed_multiplier = 0.5
+    target.debuff_timer = 10000
+
+def anti_gravity_effect(ball, activator=None, **kwargs):
+    print(f"Player {activator} used AntiGravity!")
+    ball.gravity = -abs(ball.gravity)
+    ball.served = False
+
+def no_strength_effect(paddle1, paddle2, activator=None, **kwargs):
+    print(f"Player {activator} used No Strength on opponent!")
+    target = paddle2 if activator == 1 else paddle1
+    target.smash_hold_multiplier = 1.5
+    target.smash_power_debuff = 0.05
+    target.debuff_timer = 5000
+
+def disruption_effect(paddle1, paddle2, activator=None, **kwargs):
+    print(f"Player {activator} used Disruption on opponent!")
+    target = paddle2 if activator == 1 else paddle1
+    target.keys_swapped = True
+    target.debuff_timer = 10000
+
+def delay_effect(paddle1, paddle2, activator=None, **kwargs):
+    print(f"Player {activator} used Delay on opponent!")
+    target = paddle2 if activator == 1 else paddle1
+    target.swing_time_multiplier = 2.0
+    target.debuff_timer = 10000
+
+def weakened_effect(paddle1, paddle2, activator=None, **kwargs):
+    print(f"Player {activator} used Weakened on opponent!")
+    target = paddle2 if activator == 1 else paddle1
+    target.pushback_multiplier = 3.0
+    target.debuff_timer = 10000
+
+def exhaustion_effect(paddle1, paddle2, activator=None, **kwargs):
+    print(f"Player {activator} used Exhaustion on opponent!")
+    target = paddle2 if activator == 1 else paddle1
+    target.hit_strength_multiplier = 0.5
+    target.debuff_timer = 10000
 
 
 chosen_card = None
@@ -178,63 +262,16 @@ cards = [
           Card("Shadow Clone", shadow_clone_effect), #cards[3]
           Card("Low impact", low_impact_effect, is_Passive=True), #cards[4]
           Card("High impact", high_impact_effect, is_Passive=True), #cards[5]
-          Card("Shrink", shrink_effect) #cards[6]
+          Card("Shrink", shrink_effect), #cards[6]
+          Card("Rally", rally_effect,  is_Passive=True),
+          Card("Gravitational Pull",gravitational_pull_effect),
+          Card("Smaller Paddle", smaller_paddle_effect),
+          Card("Extra Weight", extra_weight_effect),
+          Card("AntiGravity", anti_gravity_effect),
+          Card("No Strength", no_strength_effect),
+          Card("Disruption", disruption_effect),
+          Card("Delay", delay_effect),
+          Card("Weakened", weakened_effect),
+          Card("Exhaustion", exhaustion_effect),
 ]
 card_count = 0
-
-
-def draw_random_card(screen, font, num=3):
-    selected_cards = random.sample(cards, num)
-
-    card_width = 200
-    card_height = 120
-    spacing = 50
-    transparency = 180
-
-    screen_width = screen.get_width()
-    screen_height = screen.get_height()
-
-    start_x = (screen_width - ((card_width * num) + spacing * (num - 1))) // 2
-    y_pos = screen_height // 2 - card_height // 2
-
-    card_rects = []
-    current_screen = screen.copy()
-
-    running = True
-    while running:
-        #screen.fill((30, 30, 30))
-        screen.blit(current_screen, (0, 0))
-
-        overlay = pg.Surface((screen_width, screen_height), pg.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))  # Semi-transparent overlay
-        screen.blit(overlay, (0, 0))
-
-        # Draw cards
-        for i, card in enumerate(selected_cards):
-            rect = pg.Rect(start_x + i * (card_width + spacing), y_pos, card_width, card_height)
-            card_rects.append(rect)
-            card_surface = pg.Surface((card_width, card_height), pg.SRCALPHA)
-
-            card_surface.fill((0,0,0,0))
-
-            pg.draw.rect(card_surface, (200, 200, 200, transparency), card_surface.get_rect(), border_radius= 10)
-            pg.draw.rect(card_surface, (0, 0, 0, transparency), card_surface.get_rect(), 3, border_radius=10)
-
-            text_surface = font.render(card.name, True, (0, 0, 0))
-            text_rect = text_surface.get_rect(center=card_surface.get_rect().center)
-            card_surface.blit(text_surface, text_rect)
-            screen.blit(card_surface, rect)
-
-        pg.display.flip()
-
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                pg.quit()
-                return None
-
-            if event.type == pg.MOUSEBUTTONDOWN:
-                mouse_pos = pg.mouse.get_pos()
-
-                for i, rect in enumerate(card_rects):
-                    if rect.collidepoint(mouse_pos):
-                        return selected_cards[i]

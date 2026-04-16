@@ -43,8 +43,8 @@ class PongPaddle:
     swingKey: int = -1
     smashKey: int = -1
 
-    def __init__(self, width: int, height: int, color: tuple[int, int, int],
-             initialPos: tuple[float, float] = (0, 0), speed: float = 1, images: list[pg.Surface] = None):
+    def __init__(self, width: int, height: int, color: tuple[int, int, int], 
+             initialPos: tuple[float, float] = (0, 0), speed: float = 1, images: list[pg.Surface] = None,):
         self.sprites = images
         self.paddleSurface = images[0]
         self.hitbox = pg.Rect(initialPos[0], initialPos[1], width, height)
@@ -55,6 +55,14 @@ class PongPaddle:
         self.speed = speed
         self.currentSpeed = speed
         self.velocity = (0, 0)
+        self.speed_multiplier = 1.0         
+        self.smash_hold_multiplier = 1.0    
+        self.smash_power_debuff = 0.0       
+        self.hit_strength_multiplier = 1.0  
+        self.pushback_multiplier = 1.0      
+        self.keys_swapped = False           
+        self.swing_time_multiplier = 1.0    
+        self.debuff_timer = 0                 
     def brighten(self, amount: float) -> tuple[int, int, int]:
         '''Brightens the paddle's color by the specified amount (between 0 and 255) and returns the new color.'''
         h, s, v = self.color
@@ -119,6 +127,8 @@ class PongPaddle:
             self.cooldownTimer = 0
             if not self.smash_charging and not self.smash_swinging:
                 self.currentSpeed = self.speed
+        swing_key  = self.smashKey if self.keys_swapped else self.swingKey
+        smash_key  = self.swingKey if self.keys_swapped else self.smashKey
         if self.swingKey >= 0 and keyList[self.swingKey] and self.can_swing:
             self.swinging = True
             self.can_swing = False
@@ -130,8 +140,8 @@ class PongPaddle:
 
 
         self.velocity = (
-            move_x * self.currentSpeed,
-            move_y * self.currentSpeed
+            move_x * self.currentSpeed * self.speed_multiplier,
+            move_y * self.currentSpeed * self.speed_multiplier
         )
         new_x = self.position[X] + self.velocity[X] * dt / 1000
         new_y = self.position[Y] + self.velocity[Y] * dt / 1000
@@ -168,7 +178,7 @@ class PongPaddle:
             self.paddleSurface = self.sprites[5] # Advance to frame 6 and deactivate the hitbox
         elif timer > self.swingForwardTime * 3 / 4 and timer <= self.swingForwardTime:
             self.paddleSurface = self.sprites[6] # Advance to frame 7
-        elif timer > self.swingForwardTime:
+        elif timer > self.swingForwardTime * self.swing_time_multiplier:
             self.swinging = False
             self.smash_swinging = False
             self.cooldownTimer = self.cooldownTime
@@ -188,8 +198,8 @@ class PongPaddle:
                 self.swing_forward(self.smashTimer)
                 return
             elif self.smashTimer > 0:
-                if self.smashTimer >= self.smashHoldTime:
-                    self.smashPower = min(self.smashTimer / self.smashHoldTime, 1)
+                if self.smashTimer >= self.smashHoldTime * self.smash_hold_multiplier:
+                    self.smashPower = max(0, min(self.smashTimer / self.smashHoldTime, 1) - self.smash_power_debuff)
                     self.smash_swinging = True
                     self.swing_forward(0)
                 else:
