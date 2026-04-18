@@ -34,6 +34,7 @@ class Card:
         if self.effect_fn:
             kwargs['activator'] = activator
             self.effect_fn(**kwargs)
+
     def can_use(self, current_round):
         #if card can be used 
         if self.is_Passive:
@@ -220,7 +221,7 @@ def gravitational_pull_effect(ball, paddle1, paddle2, activator=None, **kwargs):
             ball.set_velocity(vel[0] * 0.5, vel[1], vel[2])
             ball.spin = 0.3
 
-# Nerf effects (target opponent)
+
 def smaller_paddle_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Smaller Paddle on opponent!")
     if activator == 1:
@@ -276,23 +277,23 @@ def exhaustion_effect(paddle1, paddle2, activator=None, **kwargs):
 chosen_card = None
 
 cards = [
-          Card("Arc Strike", arc_strike_effect), #cards[0]
-          Card("Bigger is better", bigger_is_better_effect), #cards[1]
-          Card("Bring it back", bring_it_back_effect), #cards[2]
-          Card("Shadow Clone", shadow_clone_effect), #cards[3]
-          Card("Low impact", low_impact_effect, is_Passive=True), #cards[4]
-          Card("High impact", high_impact_effect, is_Passive=True), #cards[5]
-          Card("Shrink", shrink_effect), #cards[6]
-          Card("Rally", rally_effect,  is_Passive=True), #cards[7]
-          Card("Gravitational Pull",gravitational_pull_effect), #cards[8]
-          Card("Smaller Paddle", smaller_paddle_effect),  #cards[9]
-          Card("Extra Weight", extra_weight_effect), #cards[10]
-          Card("AntiGravity", anti_gravity_effect), #cards[11]
-          Card("No Strength", no_strength_effect), #cards[12]
-          Card("Disruption", disruption_effect), #cards[13]
-          Card("Delay", delay_effect),  #cards[14]
-          Card("Weakened", weakened_effect), #cards[15]
-          Card("Exhaustion", exhaustion_effect), #cards[16
+    Card("Arc Strike", arc_strike_effect, cooldown_rounds=1),
+    Card("Bigger is better", bigger_is_better_effect, cooldown_rounds=2),
+    Card("Bring it back", bring_it_back_effect, cooldown_rounds=1),
+    Card("Shadow Clone", shadow_clone_effect, cooldown_rounds=2),
+    Card("Low impact", low_impact_effect, is_Passive=True),  
+    Card("High impact", high_impact_effect, is_Passive=True),
+    Card("Shrink", shrink_effect, cooldown_rounds=1),
+    Card("Rally", rally_effect, is_Passive=True),
+    Card("Gravitational Pull", gravitational_pull_effect, cooldown_rounds=2),
+    Card("Smaller Paddle", smaller_paddle_effect, cooldown_rounds=2),
+    Card("Extra Weight", extra_weight_effect, cooldown_rounds=2),
+    Card("AntiGravity", anti_gravity_effect, cooldown_rounds=2),
+    Card("No Strength", no_strength_effect, cooldown_rounds=2),
+    Card("Disruption", disruption_effect, cooldown_rounds=2),
+    Card("Delay", delay_effect, cooldown_rounds=2),
+    Card("Weakened", weakened_effect, cooldown_rounds=2),
+    Card("Exhaustion", exhaustion_effect, cooldown_rounds=2),
 ]
 card_count = 0
 
@@ -341,6 +342,17 @@ class PlayerCardInventory:
     
     def is_full(self):
         return len(self.cards) >= self.max_slots
+    def use_card(self, index, current_round):
+        card = self.get_card(index)
+        if card and card.can_use(current_round):
+            card.use_card()
+            return True
+        return False
+    
+    def update_all_cooldowns(self):
+        for card in self.cards:
+            card.update_cooldown()
+    
 
 def handle_inventory_selection(screen, font, player_id, player1_inventory, player2_inventory, new_card):
     inventory = player1_inventory if player_id == 1 else player2_inventory
@@ -592,7 +604,6 @@ def draw_random_card(screen, font, player_id, player1_inventory, player2_invento
     return None
 #Function to pull up all card effects for testing purposes
 def show_all_cards(screen, font, player_id, player_inventory):
-    """Shows all available cards for debugging/selection"""
     from cards import cards
     
     available_cards = [card for card in cards if card.name not in player_inventory.card_names]
@@ -639,7 +650,7 @@ def show_all_cards(screen, font, player_id, player_inventory):
         overlay.fill((0, 0, 0, 180))
         screen.blit(overlay, (0, 0))
         
-        title_text = font.render(f"Player {player_id} - ALL CARDS (Debug)", True, (255, 255, 0))
+        title_text = font.render(f"Player {player_id} - ALL CARDS", True, (255, 255, 0))
         title_rect = title_text.get_rect(center=(screen_width // 2, 50))
         screen.blit(title_text, title_rect)
         
