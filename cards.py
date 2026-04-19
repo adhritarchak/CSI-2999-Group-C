@@ -27,6 +27,7 @@ class Card:
         self.owner = owner
         self.used_this_round = False
         self.cooldown_rounds = cooldown_rounds
+        self.rounds_left_on_cooldown = 0
 
     def activate(self, activator = None, **kwargs):
         '''The function to call when the card is used, which activates all of its effects. The caller parameter 
@@ -311,13 +312,16 @@ class PlayerCardInventory:
         
         if len(self.cards) < self.max_slots:
             self.cards.append(card)
+            self.card_names.add(card.name)
             card.owner = self.player_id
             return True
         return False
     
     def remove_card(self, index):
         if 0 <= index < len(self.cards):
-            return self.cards.pop(index)
+            removed_card = self.cards.pop(index)
+            self.card_names.discard(removed_card.name)  
+            return removed_card
         return None
     
     def swap_card(self, index, new_card):
@@ -411,9 +415,18 @@ def handle_inventory_selection(screen, font, player_id, player1_inventory, playe
                 mouse_pos = pg.mouse.get_pos()
                 for i, rect in enumerate(card_rects):
                     if rect.collidepoint(mouse_pos):
-                        # Check if player already has the new card
                         if new_card.name in inventory.card_names:
-                            print(f"Player {player_id} already has {new_card.name}! Cannot add duplicate.")
+                            print(f"Player {player_id} already has {new_card.name}. Cannot add duplicate.")
+                            temp_surface = screen.copy()
+                            screen.blit(temp_surface, (0, 0))
+                            overlay = pg.Surface((screen.get_width(), screen.get_height()), pg.SRCALPHA)
+                            overlay.fill((0, 0, 0, 180))
+                            screen.blit(overlay, (0, 0))
+                            msg_text = font.render(f"You already have {new_card.name}", True, (255, 200, 100))
+                            msg_rect = msg_text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
+                            screen.blit(msg_text, msg_rect)
+                            pg.display.flip()
+                            pg.time.wait(1000)
                             return None
                         old_card = inventory.swap_card(i, new_card)
                         print(f"Player {player_id} replaced {old_card.name} with {new_card.name}")
@@ -483,6 +496,20 @@ def handle_inventory_selection_for_all_cards(screen, font, player_id, inventory,
                 mouse_pos = pg.mouse.get_pos()
                 for i, rect in enumerate(card_rects):
                     if rect.collidepoint(mouse_pos):
+                        if new_card.name in inventory.card_names:
+                            print(f"Player {player_id} already has {new_card.name}! Cannot add duplicate.")
+                            # Show message on screen
+                            temp_surface = screen.copy()
+                            screen.blit(temp_surface, (0, 0))
+                            overlay = pg.Surface((screen.get_width(), screen.get_height()), pg.SRCALPHA)
+                            overlay.fill((0, 0, 0, 180))
+                            screen.blit(overlay, (0, 0))
+                            msg_text = font.render(f"You already have {new_card.name}!", True, (255, 200, 100))
+                            msg_rect = msg_text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
+                            screen.blit(msg_text, msg_rect)
+                            pg.display.flip()
+                            pg.time.wait(1000)
+                            return None
                         old_card = inventory.swap_card(i, new_card)
                         print(f"Player {player_id} replaced {old_card.name} with {new_card.name}")
                         return new_card
@@ -499,28 +526,12 @@ def draw_random_card(screen, font, player_id, player1_inventory, player2_invento
     available_cards = [card for card in cards if card.name not in inventory.card_names]
     
     if len(available_cards) == 0:
-        print(f"Player {player_id} has all cards already!")
-        # Show message on screen
-        screen_copy = screen.copy()
-        screen.blit(screen_copy, (0, 0))
-        overlay = pg.Surface((screen.get_width(), screen.get_height()), pg.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        screen.blit(overlay, (0, 0))
-        msg_text = font.render("You already have all cards!", True, (255, 200, 100))
-        msg_rect = msg_text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
-        screen.blit(msg_text, msg_rect)
-        pg.display.flip()
-        pg.time.wait(1500)
         return None
     
-   
     if len(available_cards) < num:
         selected_cards = available_cards
     else:
         selected_cards = random.sample(available_cards, num)
-
-
-    selected_cards = random.sample(cards, num)
     
     card_width = 200
     card_height = 120
@@ -533,9 +544,8 @@ def draw_random_card(screen, font, player_id, player1_inventory, player2_invento
     start_x = (screen_width - ((card_width * num) + spacing * (num - 1))) // 2
     y_pos = screen_height // 2 - card_height // 2
     
-    inventory = player1_inventory if player_id == 1 else player2_inventory
-    
     card_rects = []
+    
     current_screen = screen.copy()
     
     running = True
@@ -574,14 +584,15 @@ def draw_random_card(screen, font, player_id, player1_inventory, player2_invento
         if is_swap:
             inst_text = font.render("Click a card to swap it with your selected slot", True, (200, 200, 200))
         elif inventory.is_full():
-            inst_text = font.render("Inventory full! Click a card to replace one of your existing cards", True, (200, 200, 200))
+            inst_text = font.render("Inventory full. Click a card to replace one of your existing cards", True, (200, 200, 200))
         else:
             inst_text = font.render("Click a card to add it to your inventory", True, (200, 200, 200))
-            inst_rect = inst_text.get_rect(center=(screen_width // 2, screen_height - 30))
-            screen.blit(inst_text, inst_rect)
+        inst_rect = inst_text.get_rect(center=(screen_width // 2, screen_height - 30))
+        screen.blit(inst_text, inst_rect)
         
         pg.display.flip()
         
+        # Process events inside this loop
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 pg.quit()
@@ -602,7 +613,7 @@ def draw_random_card(screen, font, player_id, player1_inventory, player2_invento
                             print(f"Player {player_id} added {selected_cards[i].name} to inventory")
                             return selected_cards[i]
     return None
-#Function to pull up all card effects for testing purposes
+
 def show_all_cards(screen, font, player_id, player_inventory):
     from cards import cards
     
@@ -622,11 +633,7 @@ def show_all_cards(screen, font, player_id, player_inventory):
         pg.time.wait(1500)
         return None
     
-    # Use available_cards instead of all cards
     all_cards = available_cards
-
-
-    all_cards = cards
     
     card_width = 200
     card_height = 120
@@ -673,9 +680,8 @@ def show_all_cards(screen, font, player_id, player_inventory):
             card_surface.blit(text_surface, text_rect)
             screen.blit(card_surface, rect)
         
-        # Show different instructions based on inventory status
         if player_inventory.is_full():
-            inst_text = font.render("INVENTORY FULL! Click a card to REPLACE an existing card", True, (255, 200, 100))
+            inst_text = font.render("Inventory Full. Click a card to REPLACE an existing card", True, (255, 200, 100))
         else:
             inst_text = font.render("Click a card to add it to your inventory", True, (200, 200, 200))
         inst_rect = inst_text.get_rect(center=(screen_width // 2, screen_height - 50))
@@ -685,7 +691,6 @@ def show_all_cards(screen, font, player_id, player_inventory):
         inv_rect = inv_text.get_rect(topleft=(20, 20))
         screen.blit(inv_text, inv_rect)
         
-        # Draw current inventory cards if full (for replacement)
         if player_inventory.is_full():
             inv_title = font.render("Your cards (click to replace):", True, (255, 200, 100))
             screen.blit(inv_title, (20, 50))
@@ -705,10 +710,8 @@ def show_all_cards(screen, font, player_id, player_inventory):
                 for rect, card in card_rects:
                     if rect.collidepoint(mouse_pos):
                         if player_inventory.is_full():
-                            # Inventory full - show replacement selection
                             return handle_inventory_selection_for_all_cards(screen, font, player_id, player_inventory, card)
                         else:
-                            # Inventory has space - just add
                             if player_inventory.add_card(card):
                                 print(f"Player {player_id} added {card.name} to inventory")
                             else:
