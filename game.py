@@ -504,6 +504,14 @@ while running:
 
     if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
         ball.repulsion_timer -= dt
+
+        if hasattr(ball, 'prev_height'):
+            if ball.prev_height > 0 and ball.get_height() == 0:
+                # Ball just bounced on the ground
+                ball.repulsion_active = False
+                print("Repulsion effect ended after first bounce!")
+
+        ball.prev_height = ball.get_height()
         
         if ball.repulsion_activator == 1:
             enemy_paddle = paddle2
@@ -519,17 +527,17 @@ while running:
         
         if direction == 1:
             distance = paddle_rect.left - ball_x
-            if 0 < distance < 100:
-                ball.set_velocity(-abs(ball_vel_x) * 0.8 if ball_vel_x > 0 else ball_vel_x * 1.2, 
-                                ball_vel_y + random.uniform(-4, 4), ball_vel_z)
-                ball.spin = -0.5
+            if 0 < distance < 30:
+                ball.set_velocity(-abs(ball_vel_x) * 0.1 if ball_vel_x > 0 else ball_vel_x * 1.1, 
+                                ball_vel_y + random.uniform(-1, 1), ball_vel_z)
+                ball.spin = -0.1
                 print(f"Repulsion pushed ball left! Distance: {distance:.0f}")
         else:
             distance = ball_x - paddle_rect.right
-            if 0 < distance < 100:
-                ball.set_velocity(abs(ball_vel_x) * 0.8 if ball_vel_x < 0 else ball_vel_x * 1.2,
-                                ball_vel_y + random.uniform(-4, 4), ball_vel_z)
-                ball.spin = 0.5
+            if 0 < distance < 30:
+                ball.set_velocity(abs(ball_vel_x) * 0.1 if ball_vel_x < 0 else ball_vel_x * 1.1,
+                                ball_vel_y + random.uniform(-1, 1), ball_vel_z)
+                ball.spin = 0.1
                 print(f"Repulsion pushed ball right! Distance: {distance:.0f}")
         
         # End effect after first hit

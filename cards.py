@@ -276,7 +276,7 @@ def repulsion_effect(ball, activator=None, **kwargs):
     print(f"Player {activator} used Repulsion!")
     ball.repulsion_active = True
     ball.repulsion_activator = activator
-    ball.repulsion_timer = 5000 # Lasts 5 seconds or until first bounce
+    ball.repulsion_timer = 2000 # Lasts 2 seconds or until first bounce
     ball.repulsion_has_hit = False  
 
 def no_strength_effect(paddle1, paddle2, activator=None, **kwargs):
