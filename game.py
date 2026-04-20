@@ -255,15 +255,7 @@ while running:
                     # Start next round
                     scoreboard.start_next_round()
                     scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary, last_round_winner)
-                    
-                    # Reset ball to player 1's side for new round
-                    #ball.set_position(
-                        #paddle1.hitbox.right + ballConfig['Radius'] + 5,
-                        #paddle1.hitbox.centery,
-                        #ballConfig['init_height']
-                    #)
-                    #ball.set_velocity(0, 0, 0)
-                    #ball.served = False
+                
                     
                     waiting_for_serve = True
                     serve_timer = 30
@@ -340,13 +332,9 @@ while running:
             player2_inventory.update_all_cooldowns()
             
             
-            #scoreboard.start_next_round()
             scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary, winner)
             waiting_for_serve = True    
             serve_timer = 30
-            #ball.set_position(paddle1.hitbox.right + 20, Center_y, 50)
-            #ball.set_velocity(0, 0, 0)
-            #ball.served = False
             chosen_card = None
             shadow_balls.clear()
             continue

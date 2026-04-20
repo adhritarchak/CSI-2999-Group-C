@@ -238,10 +238,11 @@ def extra_weight_effect(paddle1, paddle2, activator=None, **kwargs):
     target.speed_multiplier = 0.5
     target.debuff_timer = 10000
 
-def anti_gravity_effect(ball, activator=None, **kwargs):
-    print(f"Player {activator} used AntiGravity!")
+def zero_gravity_effect(ball, activator=None, **kwargs):
+    print(f"Player {activator} used ZeroGravity!")
     ball.gravity = -abs(ball.gravity)
     ball.served = False
+    #work on
 
 def no_strength_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used No Strength on opponent!")
@@ -255,6 +256,7 @@ def disruption_effect(paddle1, paddle2, activator=None, **kwargs):
     target = paddle2 if activator == 1 else paddle1
     target.keys_swapped = True
     target.debuff_timer = 10000
+    #Work on
 
 def delay_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Delay on opponent!")
@@ -289,7 +291,7 @@ cards = [
     Card("Gravitational Pull", gravitational_pull_effect, cooldown_rounds=2),
     Card("Smaller Paddle", smaller_paddle_effect, cooldown_rounds=2),
     Card("Extra Weight", extra_weight_effect, cooldown_rounds=2),
-    Card("AntiGravity", anti_gravity_effect, cooldown_rounds=2),
+    Card("ZeroGravity", zero_gravity_effect, cooldown_rounds=2),
     Card("No Strength", no_strength_effect, cooldown_rounds=2),
     Card("Disruption", disruption_effect, cooldown_rounds=2),
     Card("Delay", delay_effect, cooldown_rounds=2),
