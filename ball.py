@@ -92,6 +92,9 @@ class Ball:
             vel[Y] + self.spin,
             vel[HEIGHT] - self.gravity
         )
+        if nextPos[HEIGHT] > self.max_height:
+            nextPos = (nextPos[X], nextPos[Y], self.max_height)
+            nextVel = (nextVel[X], nextVel[Y], 0)
 
         if nextPos[HEIGHT] < 0:  # If the ball hits the ground
             nextPos = (nextPos[X], nextPos[Y], 0)  # Reset height to ground level

@@ -116,6 +116,12 @@ ball.rally_slow_factor = 0.6
 ball.rally_speed_threshold = 7.0
 ball.original_max_speed = ball.max_speed
 
+ball.repulsion_active = False
+ball.repulsion_activator = None
+ball.repulsion_timer = 0
+ball.repulsion_has_hit = False
+ball.repulsion_printed = False  
+
 paddle1_debuff_printed = False
 paddle2_debuff_printed = False
 paddle1_debuff_expired = False
@@ -252,6 +258,8 @@ while running:
 
             if event.key == pygame.K_SPACE:
                 if scoreboard.showing_round_end:
+                    print(f"DEBUG: last_round_winner = {last_round_winner}")  # Add this
+                    winner_for_next = scoreboard.rnd_winner
                     # Start next round
                     scoreboard.start_next_round()
                     scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary, last_round_winner)
@@ -312,32 +320,34 @@ while running:
     scored, winner = scoring.check_score()
     if scored:
         print(f"SCORING EVENT - Winner: Player {winner}")
-        last_scorer = winner  # Track who scored
+        last_scorer = winner
         losing_player = 2 if winner == 1 else 1
+
+        player1_inventory.update_all_cooldowns()
+        player2_inventory.update_all_cooldowns()
 
         round_continues = scoreboard.add_point(winner)
 
         selected_card = draw_random_card(screen, font, losing_player, player1_inventory, player2_inventory)
         if selected_card:
-                print(f"Player {losing_player} selected: {selected_card.name}")
+            print(f"Player {losing_player} selected: {selected_card.name}")
+        
         if round_continues:
-        # Reset ball for next point - ball appears on the LOSER's side
+            # Reset ball for next point
             scoring.reset_ball_for_serve(ballConfig, last_scorer)
             scoring.reset_paddle_states()
             waiting_for_serve = True
             serve_timer = 30
         else:
+            # Round ended - no need to update cooldowns again here
             last_round_winner = winner
-            player1_inventory.update_all_cooldowns()
-            player2_inventory.update_all_cooldowns()
             
-            
-            scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary, winner)
+            #scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary, winner)
             waiting_for_serve = True    
             serve_timer = 30
             chosen_card = None
             shadow_balls.clear()
-            continue
+            #continue
     
     # ===== HANDLE SERVE WAITING STATE =====
     if waiting_for_serve:
@@ -420,6 +430,21 @@ while running:
             paddle1.hit_strength_multiplier = 1.0
             paddle1.swing_time_multiplier = 1.0
             paddle1.keys_swapped = False
+            if paddle1.hitbox.width < paddleConfig['Paddle_Width'] or paddle1.hitbox.height < paddleConfig['Paddle_Height']:
+                old_width = paddle1.hitbox.width
+                old_height = paddle1.hitbox.height
+                new_width = paddleConfig['Paddle_Width']
+                new_height = paddleConfig['Paddle_Height']
+                
+                # Center the restored paddle
+                new_x = paddle1.position[0] + (old_width - new_width) // 2
+                new_y = paddle1.position[1] + (old_height - new_height) // 2
+                
+                paddle1.hitbox.width = new_width
+                paddle1.hitbox.height = new_height
+                paddle1.position = (new_x, new_y)
+                paddle1.set_hitbox_pos(0, 0)
+        
             if paddle1_debuff_expired == True:
                 print("Paddle1 debuffs expired")
                 paddle1_debuff_printed = True
@@ -438,6 +463,21 @@ while running:
                 paddle2.hit_strength_multiplier = 1.0
                 paddle2.swing_time_multiplier = 1.0
                 paddle2.keys_swapped = False
+                if paddle2.hitbox.width < paddleConfig['Paddle_Width'] or paddle2.hitbox.height < paddleConfig['Paddle_Height']:
+                    old_width = paddle2.hitbox.width
+                    old_height = paddle2.hitbox.height
+                    new_width = paddleConfig['Paddle_Width']
+                    new_height = paddleConfig['Paddle_Height']
+                    
+                    # Center the restored paddle
+                    new_x = paddle2.position[0] + (old_width - new_width) // 2
+                    new_y = paddle2.position[1] + (old_height - new_height) // 2
+                    
+                    paddle2.hitbox.width = new_width
+                    paddle2.hitbox.height = new_height
+                    paddle2.position = (new_x, new_y)
+                    paddle2.set_hitbox_pos(0, 0)
+        
                 if paddle2_debuff_expired == True:
                     print("Paddle2 debuffs expired")
                     paddle2_debuff_printed = True
@@ -463,6 +503,45 @@ while running:
             else:
                 # Restore original max speed when ball is not going fast
                 ball.max_speed = ball.original_max_speed
+
+    if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
+        ball.repulsion_timer -= dt
+        
+        if ball.repulsion_activator == 1:
+            enemy_paddle = paddle2
+            direction = 1  
+        else:
+            enemy_paddle = paddle1
+            direction = -1  
+        
+        ball_x, ball_y = ball.get_position()
+        ball_vel_x, ball_vel_y, ball_vel_z = ball.get_velocity()
+        
+        paddle_rect = enemy_paddle.get_hitbox()
+        
+        if direction == 1:
+            distance = paddle_rect.left - ball_x
+            if 0 < distance < 100:
+                ball.set_velocity(-abs(ball_vel_x) * 0.8 if ball_vel_x > 0 else ball_vel_x * 1.2, 
+                                ball_vel_y + random.uniform(-4, 4), ball_vel_z)
+                ball.spin = -0.5
+                print(f"Repulsion pushed ball left! Distance: {distance:.0f}")
+        else:
+            distance = ball_x - paddle_rect.right
+            if 0 < distance < 100:
+                ball.set_velocity(abs(ball_vel_x) * 0.8 if ball_vel_x < 0 else ball_vel_x * 1.2,
+                                ball_vel_y + random.uniform(-4, 4), ball_vel_z)
+                ball.spin = 0.5
+                print(f"Repulsion pushed ball right! Distance: {distance:.0f}")
+        
+        # End effect after first hit
+        if ball.repulsion_has_hit:
+            ball.repulsion_active = False
+            print("Repulsion effect ended after hit!")
+        
+        if ball.repulsion_timer <= 0:
+            ball.repulsion_active = False
+            print("Repulsion effect expired!")
    
     if ball.within_rect(paddle1.get_hitbox(), (0, 0)) and paddle1.can_hit_ball:
             if ball.get_velocity()[0] <= 0:
@@ -474,6 +553,8 @@ while running:
                     chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
                 if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
                     paddle1.position = (paddle1.position[0] - 30, paddle1.position[1])
+                if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
+                    ball.repulsion_has_hit = True
                     
     if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
             if ball.get_velocity()[0] >= 0:
@@ -485,6 +566,8 @@ while running:
                     chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
                 if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
                     paddle2.position = (paddle2.position[0] + 30, paddle2.position[1])
+                if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
+                    ball.repulsion_has_hit = True
                     
     ball.clamp_velocity()
         

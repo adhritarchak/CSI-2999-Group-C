@@ -58,11 +58,11 @@ class GameScoring:
         self.paddle2.has_hit_ball = False
         
     def reset_for_new_round(self, paddle_config, ball_config, center_y, left_boundary, right_boundary, round_winner=None):
-        
         self.paddle1.position = (left_boundary + 50, center_y - paddle_config['Paddle_Height'] // 2)
         self.paddle2.position = (right_boundary - 50 - paddle_config['Paddle_Width'], center_y - paddle_config['Paddle_Height'] // 2)
         self.paddle1.set_hitbox_pos(0, 0)
         self.paddle2.set_hitbox_pos(0, 0)
+        
         self.reset_ball_for_serve(ball_config, round_winner)
         
         self.reset_paddle_states()

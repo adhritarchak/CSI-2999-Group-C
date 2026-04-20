@@ -225,12 +225,46 @@ def gravitational_pull_effect(ball, paddle1, paddle2, activator=None, **kwargs):
 
 def smaller_paddle_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Smaller Paddle on opponent!")
+    
     if activator == 1:
-        paddle2.hitbox.width = max(20, paddle2.hitbox.width // 2)
-        paddle2.hitbox.height = max(20, paddle2.hitbox.height // 2)
+        target = paddle2
+        old_width = target.hitbox.width
+        old_height = target.hitbox.height
+        old_x = target.position[0]
+        old_y = target.position[1]
+        
+        # Calculate new dimensions
+        new_width = max(20, old_width // 2)
+        new_height = max(20, old_height // 2)
+        
+        # Center the smaller paddle within the old position
+        new_x = old_x + (old_width - new_width) // 2
+        new_y = old_y + (old_height - new_height) // 2
+        
+        target.hitbox.width = new_width
+        target.hitbox.height = new_height
+        target.position = (new_x, new_y)
+        target.set_hitbox_pos(0, 0)
+        
     else:
-        paddle1.hitbox.width = max(20, paddle1.hitbox.width // 2)
-        paddle1.hitbox.height = max(20, paddle1.hitbox.height // 2)
+        target = paddle1
+        old_width = target.hitbox.width
+        old_height = target.hitbox.height
+        old_x = target.position[0]
+        old_y = target.position[1]
+        
+        new_width = max(20, old_width // 2)
+        new_height = max(20, old_height // 2)
+        
+        new_x = old_x + (old_width - new_width) // 2
+        new_y = old_y + (old_height - new_height) // 2
+        
+        target.hitbox.width = new_width
+        target.hitbox.height = new_height
+        target.position = (new_x, new_y)
+        target.set_hitbox_pos(0, 0)
+    
+    target.debuff_timer = 5000  # Lasts 5 seconds
 
 def extra_weight_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Extra Weight on opponent!")
@@ -238,11 +272,12 @@ def extra_weight_effect(paddle1, paddle2, activator=None, **kwargs):
     target.speed_multiplier = 0.5
     target.debuff_timer = 10000
 
-def zero_gravity_effect(ball, activator=None, **kwargs):
-    print(f"Player {activator} used ZeroGravity!")
-    ball.gravity = -abs(ball.gravity)
-    ball.served = False
-    #work on
+def repulsion_effect(ball, activator=None, **kwargs):
+    print(f"Player {activator} used Repulsion!")
+    ball.repulsion_active = True
+    ball.repulsion_activator = activator
+    ball.repulsion_timer = 5000 # Lasts 5 seconds or until first bounce
+    ball.repulsion_has_hit = False  
 
 def no_strength_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used No Strength on opponent!")
@@ -255,8 +290,7 @@ def disruption_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Disruption on opponent!")
     target = paddle2 if activator == 1 else paddle1
     target.keys_swapped = True
-    target.debuff_timer = 10000
-    #Work on
+    target.debuff_timer = 10000  
 
 def delay_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Delay on opponent!")
@@ -281,22 +315,22 @@ chosen_card = None
 
 cards = [
     Card("Arc Strike", arc_strike_effect, cooldown_rounds=1),
-    Card("Bigger is better", bigger_is_better_effect, cooldown_rounds=2),
+    Card("Bigger is better", bigger_is_better_effect, cooldown_rounds=1),
     Card("Bring it back", bring_it_back_effect, cooldown_rounds=1),
-    Card("Shadow Clone", shadow_clone_effect, cooldown_rounds=2),
+    Card("Shadow Clone", shadow_clone_effect, cooldown_rounds=1),
     Card("Low impact", low_impact_effect, is_Passive=True),  
     Card("High impact", high_impact_effect, is_Passive=True),
     Card("Shrink", shrink_effect, cooldown_rounds=1),
     Card("Rally", rally_effect, is_Passive=True),
-    Card("Gravitational Pull", gravitational_pull_effect, cooldown_rounds=2),
-    Card("Smaller Paddle", smaller_paddle_effect, cooldown_rounds=2),
-    Card("Extra Weight", extra_weight_effect, cooldown_rounds=2),
-    Card("ZeroGravity", zero_gravity_effect, cooldown_rounds=2),
-    Card("No Strength", no_strength_effect, cooldown_rounds=2),
-    Card("Disruption", disruption_effect, cooldown_rounds=2),
-    Card("Delay", delay_effect, cooldown_rounds=2),
-    Card("Weakened", weakened_effect, cooldown_rounds=2),
-    Card("Exhaustion", exhaustion_effect, cooldown_rounds=2),
+    Card("Gravitational Pull", gravitational_pull_effect, cooldown_rounds=1),
+    Card("Smaller Paddle", smaller_paddle_effect, cooldown_rounds=1),
+    Card("Extra Weight", extra_weight_effect, cooldown_rounds=1),
+    Card("Repulsion", repulsion_effect, cooldown_rounds=1),
+    Card("No Strength", no_strength_effect, cooldown_rounds=1),
+    Card("Disruption", disruption_effect, cooldown_rounds=1),
+    Card("Delay", delay_effect, cooldown_rounds=1),
+    Card("Weakened", weakened_effect, cooldown_rounds=1),
+    Card("Exhaustion", exhaustion_effect, cooldown_rounds=1),
 ]
 card_count = 0
 
@@ -313,9 +347,18 @@ class PlayerCardInventory:
             return False
         
         if len(self.cards) < self.max_slots:
-            self.cards.append(card)
+            # Create a NEW instance of the card for this player
+            new_card = Card(
+                name=card.name,
+                effect_fn=card.effect_fn,
+                cardType=card.type,
+                is_Passive=card.is_Passive,
+                owner=self.player_id,
+                cooldown_rounds=card.cooldown_rounds
+            )
+            self.cards.append(new_card)
             self.card_names.add(card.name)
-            card.owner = self.player_id
+            new_card.owner = self.player_id
             return True
         return False
     

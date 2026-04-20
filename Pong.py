@@ -108,18 +108,42 @@ class PongPaddle:
     def process_keys(self, keyList, dt: int):
         move_x = 0
         move_y = 0
-        if self.upKey >= 0:
-            if keyList[self.upKey] and self.position[Y] > self.bounds[TOP]:
-                move_y -= 1
-        if self.downKey >= 0:
-            if keyList[self.downKey] and self.position[Y] + self.hitbox.height < self.bounds[BOTTOM]:
-                move_y += 1
-        if self.leftKey >= 0:
-            if keyList[self.leftKey] and self.position[X] > self.bounds[LEFT]:
-                move_x -= 1
-        if self.rightKey >= 0:
-            if keyList[self.rightKey] and self.position[X] + self.hitbox.width < self.bounds[RIGHT]:
-                move_x += 1
+
+        # Check if keys are swapped
+        if self.keys_swapped:
+            if self.upKey >= 0:
+                if keyList[self.upKey] and self.position[Y] + self.hitbox.height < self.bounds[BOTTOM]:
+                    move_y += 1  
+            if self.downKey >= 0:
+                if keyList[self.downKey] and self.position[Y] > self.bounds[TOP]:
+                    move_y -= 1  
+            if self.leftKey >= 0:
+                if keyList[self.leftKey] and self.position[X] + self.hitbox.width < self.bounds[RIGHT]:
+                    move_x += 1  
+            if self.rightKey >= 0:
+                if keyList[self.rightKey] and self.position[X] > self.bounds[LEFT]:
+                    move_x -= 1 
+            
+            actual_swing_key = self.smashKey
+            actual_smash_key = self.swingKey
+        else:
+            if self.upKey >= 0:
+                if keyList[self.upKey] and self.position[Y] > self.bounds[TOP]:
+                    move_y -= 1
+            if self.downKey >= 0:
+                if keyList[self.downKey] and self.position[Y] + self.hitbox.height < self.bounds[BOTTOM]:
+                    move_y += 1
+            if self.leftKey >= 0:
+                if keyList[self.leftKey] and self.position[X] > self.bounds[LEFT]:
+                    move_x -= 1
+            if self.rightKey >= 0:
+                if keyList[self.rightKey] and self.position[X] + self.hitbox.width < self.bounds[RIGHT]:
+                    move_x += 1
+            
+            actual_swing_key = self.swingKey
+            actual_smash_key = self.smashKey
+        
+        # Cooldown handling
         if self.cooldownTimer > 0:
             self.cooldownTimer -= dt
         else:
@@ -127,18 +151,18 @@ class PongPaddle:
             self.cooldownTimer = 0
             if not self.smash_charging and not self.smash_swinging:
                 self.currentSpeed = self.speed
-        swing_key  = self.smashKey if self.keys_swapped else self.swingKey
-        smash_key  = self.swingKey if self.keys_swapped else self.smashKey
-        if self.swingKey >= 0 and keyList[self.swingKey] and self.can_swing:
+        
+        if actual_swing_key >= 0 and keyList[actual_swing_key] and self.can_swing:
             self.swinging = True
             self.can_swing = False
-        if self.smashKey >= 0 and keyList[self.smashKey] and self.can_swing:
+        
+        if actual_smash_key >= 0 and keyList[actual_smash_key] and self.can_swing:
             self.smash_charging = True
             self.can_swing = False
+        
         if self.smashKey >= 0 and self.smash_charging and not keyList[self.smashKey]:
             self.smash_charging = False
-
-
+        
         self.velocity = (
             move_x * self.currentSpeed * self.speed_multiplier,
             move_y * self.currentSpeed * self.speed_multiplier
@@ -150,12 +174,7 @@ class PongPaddle:
         new_y = max(self.bounds[TOP], min(new_y, self.bounds[BOTTOM] - self.hitbox.height))
 
         self.position = (new_x, new_y)
-        #self.position = (
-            #self.position[X] + self.velocity[X] * dt / 1000,
-            #self.position[Y] + self.velocity[Y] * dt / 1000
-        #)
         self.set_hitbox_pos(self.paddleSurface.get_width() - self.hitbox.width, 0)
-        #self.set_hitbox_pos(30)
     def process_swing(self, dt: int):
         if not self.swinging:
             return
