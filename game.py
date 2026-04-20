@@ -258,12 +258,10 @@ while running:
 
             if event.key == pygame.K_SPACE:
                 if scoreboard.showing_round_end:
-                    print(f"DEBUG: last_round_winner = {last_round_winner}")  # Add this
                     winner_for_next = scoreboard.rnd_winner
-                    # Start next round
+
                     scoreboard.start_next_round()
-                    scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary, last_round_winner)
-                
+                    scoring.reset_for_new_round(paddleConfig, ballConfig, Center_y, Left_Boundary, Right_Boundary, winner_for_next)                
                     
                     waiting_for_serve = True
                     serve_timer = 30
