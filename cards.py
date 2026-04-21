@@ -264,13 +264,13 @@ def smaller_paddle_effect(paddle1, paddle2, activator=None, **kwargs):
         target.position = (new_x, new_y)
         target.set_hitbox_pos(0, 0)
     
-    target.debuff_timer = 5000  # Lasts 5 seconds
+    target.debuff_timer = 3000  # Lasts 3 seconds
 
 def extra_weight_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Extra Weight on opponent!")
     target = paddle2 if activator == 1 else paddle1
     target.speed_multiplier = 0.5
-    target.debuff_timer = 10000
+    target.debuff_timer = 3000
 
 def repulsion_effect(ball, activator=None, **kwargs):
     print(f"Player {activator} used Repulsion!")
@@ -284,31 +284,31 @@ def no_strength_effect(paddle1, paddle2, activator=None, **kwargs):
     target = paddle2 if activator == 1 else paddle1
     target.smash_hold_multiplier = 1.5
     target.smash_power_debuff = 0.05
-    target.debuff_timer = 5000
+    target.debuff_timer = 2000
 
 def disruption_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Disruption on opponent!")
     target = paddle2 if activator == 1 else paddle1
     target.keys_swapped = True
-    target.debuff_timer = 10000  
+    target.debuff_timer = 3000  
 
 def delay_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Delay on opponent!")
     target = paddle2 if activator == 1 else paddle1
     target.swing_time_multiplier = 2.0
-    target.debuff_timer = 10000
+    target.debuff_timer = 3000
 
 def weakened_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Weakened on opponent!")
     target = paddle2 if activator == 1 else paddle1
     target.pushback_multiplier = 3.0
-    target.debuff_timer = 10000
+    target.debuff_timer = 3000
 
 def exhaustion_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Exhaustion on opponent!")
     target = paddle2 if activator == 1 else paddle1
     target.hit_strength_multiplier = 0.5
-    target.debuff_timer = 10000
+    target.debuff_timer = 3000
 
 
 chosen_card = None
