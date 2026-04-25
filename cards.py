@@ -160,7 +160,10 @@ def bigger_is_better_effect(paddle1, paddle2, activator=None, **kwargs):
 def bring_it_back_effect(ball, activator=None, **kwargs):
     print(f"Player {activator} used Bring it Back!")
     vel = ball.get_velocity()
-    ball.set_velocity(-vel[0], vel[1], vel[2])
+    if activator == 1:
+        ball.set_velocity(-abs(vel[0]), vel[1], vel[2])
+    else:
+        ball.set_velocity(abs(vel[0]), vel[1], vel[2])
 
 def shadow_clone_effect(ball, shadow_balls, activator=None, **kwargs):
     print(f"Player {activator} used Shadow Clone!")
@@ -187,15 +190,25 @@ def low_impact_effect(ball, activator=None, **kwargs):
     print(f"Player {activator} used Low Impact!")
     vel = ball.get_velocity()
     if abs(vel[0]) >= ball.max_speed * 0.7:
-        ball.set_velocity(vel[0] * 2.0, vel[1], vel[2])
+        if activator == 1:
+            if vel[0] < 0:
+                ball.set_velocity(vel[0] * 2.0, vel[1], vel[2])
+                print("Low Impact boosted Player 1's return!")
+        else:
+            if vel[0] > 0:
+                ball.set_velocity(vel[0] * 2.0, vel[1], vel[2])
+                print("Low Impact boosted Player 2's return!")
 
 def high_impact_effect(paddle1, paddle2, activator=None, **kwargs):
-    print(f"Player {activator} used High Impact!")
+    print(f"Player {activator} used High Impact (Passive)!")
     if activator == 1:
-        paddle1.smashPower = min(paddle1.smashPower * 1.5, 1.0)
+        paddle1.smashPower = min(paddle1.smashPower + 0.2, 1.0)
+        paddle1.high_impact_active = True
+        print(f"Player 1's smash power increased to {paddle1.smashPower}")
     else:
-        paddle2.smashPower = min(paddle2.smashPower * 1.5, 1.0)
-
+        paddle2.smashPower = min(paddle2.smashPower + 0.2, 1.0)
+        paddle2.high_impact_active = True
+        print(f"Player 2's smash power increased to {paddle2.smashPower}")
 def shrink_effect(ball, activator=None, **kwargs):
     print(f"Player {activator} used Shrink!")
     ball.radius = max(4, ball.radius - 3)
@@ -210,17 +223,11 @@ def rally_effect(ball, activator=None, **kwargs):
 
 def gravitational_pull_effect(ball, paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Gravitational Pull!")
-    vel = ball.get_velocity()
-    pos = ball.get_position()
-    
-    if activator == 1:  
-        if vel[0] > 0 and pos[0] > paddle1.hitbox.right:
-            ball.set_velocity(vel[0] * 0.5, vel[1], vel[2])
-            ball.spin = -0.3
-    else:  
-        if vel[0] < 0 and pos[0] < paddle2.hitbox.left:
-            ball.set_velocity(vel[0] * 0.5, vel[1], vel[2])
-            ball.spin = 0.3
+    ball.grav_pull_active = True
+    ball.grav_pull_activator = activator
+    ball.grav_pull_timer = 3000  
+    ball.grav_pull_triggered = False  
+    print("Next time opponent hits the ball, it will reverse direction!")
 
 
 def smaller_paddle_effect(paddle1, paddle2, activator=None, **kwargs):

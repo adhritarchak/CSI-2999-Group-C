@@ -31,7 +31,7 @@ class PongPaddle:
     smash_charging: bool = False
     smash_swinging: bool = False
     smashTimer: int = 0
-    smashHoldTime: int = 3000
+    smashHoldTime: int = 2500
     cooldownTime: int = 2000
     cooldownTimer: int = 0
     smashPower: float = 0

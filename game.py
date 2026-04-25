@@ -122,6 +122,13 @@ ball.repulsion_timer = 0
 ball.repulsion_has_hit = False
 ball.repulsion_printed = False  
 
+ball.prev_height = ball.get_height() 
+
+ball.grav_pull_active = False
+ball.grav_pull_activator = None
+ball.grav_pull_timer = 0
+ball.grav_pull_triggered = False
+
 paddle1_debuff_printed = False
 paddle2_debuff_printed = False
 paddle1_debuff_expired = False
@@ -402,6 +409,13 @@ while running:
                 chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
             if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7:
                 paddle1.position = (paddle1.position[X] - 30, paddle1.position[Y]) #Should push paddle when returning a smash
+            if hasattr(ball, 'grav_pull_active') and ball.grav_pull_active and not ball.grav_pull_triggered:
+                if ball.grav_pull_activator == 2:
+                    current_vel = ball.get_velocity()
+                    ball.set_velocity(-current_vel[0], current_vel[1], current_vel[2])
+                    ball.grav_pull_triggered = True
+                    ball.grav_pull_active = False
+                    print("Gravitational Pull triggered on Player 1's hit!")
 
     if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
         if ball.get_velocity()[X] >= 0:
@@ -413,6 +427,14 @@ while running:
                 chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
             if abs(ball.get_velocity()[X]) >= ballConfig['Max_Speed'] * 0.7: #Should push paddle when returning a smash
                 paddle2.position = (paddle2.position[X] + 30, paddle2.position[Y])
+            if hasattr(ball, 'grav_pull_active') and ball.grav_pull_active and not ball.grav_pull_triggered:
+                if ball.grav_pull_activator == 1:
+                    # Reverse the ball's horizontal direction
+                    current_vel = ball.get_velocity()
+                    ball.set_velocity(-current_vel[0], current_vel[1], current_vel[2])
+                    ball.grav_pull_triggered = True
+                    ball.grav_pull_active = False
+                    print("Gravitational Pull triggered on Player 2's hit!")
     ball.clamp_velocity()
 
     if paddle1.debuff_timer > 0:
@@ -428,6 +450,9 @@ while running:
             paddle1.hit_strength_multiplier = 1.0
             paddle1.swing_time_multiplier = 1.0
             paddle1.keys_swapped = False
+            if hasattr(paddle1, 'high_impact_boost') and paddle1.high_impact_boost:
+                paddle1.smashPower = paddle1.original_smash_power if hasattr(paddle1, 'original_smash_power') else 0
+                paddle1.high_impact_boost = False
             if paddle1.hitbox.width < paddleConfig['Paddle_Width'] or paddle1.hitbox.height < paddleConfig['Paddle_Height']:
                 old_width = paddle1.hitbox.width
                 old_height = paddle1.hitbox.height
@@ -461,6 +486,9 @@ while running:
                 paddle2.hit_strength_multiplier = 1.0
                 paddle2.swing_time_multiplier = 1.0
                 paddle2.keys_swapped = False
+                if hasattr(paddle2, 'high_impact_boost') and paddle2.high_impact_boost:
+                    paddle2.smashPower = paddle2.original_smash_power if hasattr(paddle2, 'original_smash_power') else 0
+                    paddle2.high_impact_boost = False
                 if paddle2.hitbox.width < paddleConfig['Paddle_Width'] or paddle2.hitbox.height < paddleConfig['Paddle_Height']:
                     old_width = paddle2.hitbox.width
                     old_height = paddle2.hitbox.height
@@ -507,10 +535,8 @@ while running:
 
         if hasattr(ball, 'prev_height'):
             if ball.prev_height > 0 and ball.get_height() == 0:
-                # Ball just bounced on the ground
                 ball.repulsion_active = False
                 print("Repulsion effect ended after first bounce!")
-
         ball.prev_height = ball.get_height()
         
         if ball.repulsion_activator == 1:
@@ -527,28 +553,34 @@ while running:
         
         if direction == 1:
             distance = paddle_rect.left - ball_x
-            if 0 < distance < 30:
-                ball.set_velocity(-abs(ball_vel_x) * 0.1 if ball_vel_x > 0 else ball_vel_x * 1.1, 
-                                ball_vel_y + random.uniform(-1, 1), ball_vel_z)
-                ball.spin = -0.1
-                print(f"Repulsion pushed ball left! Distance: {distance:.0f}")
+            if 0 < distance < 60:
+                new_vel_y = ball_vel_y + random.uniform(-2, 2)
+                ball.set_velocity(ball_vel_x * 0.95, new_vel_y, ball_vel_z)
+                ball.spin = -0.4
+                print(f"Repulsion curved ball! Distance: {distance:.0f}")
         else:
             distance = ball_x - paddle_rect.right
-            if 0 < distance < 30:
-                ball.set_velocity(abs(ball_vel_x) * 0.1 if ball_vel_x < 0 else ball_vel_x * 1.1,
-                                ball_vel_y + random.uniform(-1, 1), ball_vel_z)
-                ball.spin = 0.1
-                print(f"Repulsion pushed ball right! Distance: {distance:.0f}")
+            if 0 < distance < 60:
+                new_vel_y = ball_vel_y + random.uniform(-2, 2)
+                ball.set_velocity(ball_vel_x * 0.95, new_vel_y, ball_vel_z)
+                ball.spin = 0.4
+                print(f"Repulsion curved ball! Distance: {distance:.0f}")
         
-        # End effect after first hit
         if ball.repulsion_has_hit:
             ball.repulsion_active = False
-            print("Repulsion effect ended after hit!")
+            print("Repulsion effect ended after paddle hit!")
         
         if ball.repulsion_timer <= 0:
             ball.repulsion_active = False
             print("Repulsion effect expired!")
-   
+
+
+    if hasattr(ball, 'grav_pull_active') and ball.grav_pull_active:
+        ball.grav_pull_timer -= dt
+        if ball.grav_pull_timer <= 0:
+            ball.grav_pull_active = False
+            print("Gravitational Pull effect expired!")
+        
     if ball.within_rect(paddle1.get_hitbox(), (0, 0)) and paddle1.can_hit_ball:
             if ball.get_velocity()[0] <= 0:
                 ball.bounce(1, paddle1.swingAngle)

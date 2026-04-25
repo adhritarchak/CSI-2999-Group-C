@@ -45,8 +45,9 @@ class GameScoring:
                 ball_config['init_height']
             )
         self.ball.set_velocity(0, 0, 0)
+        self.ball.spin = 0
         self.ball.served = False
-
+        
     def reset_paddle_states(self):
         self.paddle1.smash_charging = False
         self.paddle2.smash_charging = False
