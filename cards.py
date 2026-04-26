@@ -6,6 +6,36 @@ from Enums import *
 from ball import Ball
 import ball
 
+card_images_path = {"Arc_Strike": "assets/Arc.png",
+                "Bigger_is_better": "assets/Bigger.png",
+                "Bring_it_back": "assets/Bring Back.png",
+                "Shadow_Clone": "assets/Clone.png",
+                "Low_Impact": "assets/Low Impact.png",
+                "High_Impact": "assets/High Impact.png",
+}
+card_images = {}
+def load_card_images():
+        global card_images
+        for key, path in card_images_path.items():
+            try:
+                card_images[key] = pg.image.load(path).convert_alpha()
+            except:
+                print(f"Warning: Could not load card image {path}")
+                card_images[key] = None
+import os
+
+def load_card_images():
+    global card_images
+    
+    for key, path in card_images_path.items():
+        try:
+            if os.path.exists(path):
+                card_images[key] = pg.image.load(path)
+            else:
+                card_images[key] = None
+        except Exception as e:
+            print(f"Error loading {path}: {e}")
+            card_images[key] = None
 #Call cardeffect.json file
 class Card:
     '''The class containing card data.'''
@@ -18,7 +48,7 @@ class Card:
     used_this_round: bool  # Whether the card has been used this round, to prevent multiple uses of the same card in one round
     cooldown_rounds: int  # Number of rounds before the card can be used again after being used
 
-    def __init__(self, name = "Card", effect_fn = None, cardType = CardTypes.Typeless, is_Passive=False, owner = None, cooldown_rounds = 1):
+    def __init__(self, name = "Card", effect_fn = None, cardType = CardTypes.Typeless, is_Passive=False, owner = None, cooldown_rounds = 1, image_path = None):
         self.name = name
         self.type = cardType
         self.effect_fn = effect_fn
@@ -28,6 +58,7 @@ class Card:
         self.used_this_round = False
         self.cooldown_rounds = cooldown_rounds
         self.rounds_left_on_cooldown = 0
+        self.image_path = image_path
 
     def activate(self, activator = None, **kwargs):
         '''The function to call when the card is used, which activates all of its effects. The caller parameter 
@@ -51,6 +82,7 @@ class Card:
         #Back to normal after cooldown
         if self.rounds_left_on_cooldown > 0:
             self.rounds_left_on_cooldown -= 1
+
 
 class Deck:
     '''Stack for cards, has both a draw and discard pile for the cards.'''
@@ -171,20 +203,60 @@ def shadow_clone_effect(ball, shadow_balls, activator=None, **kwargs):
     pos = ball.get_position()
     bounds = ball.get_bounds()
     
-    shadow = Ball(
-        x=pos[0], y=pos[1],
-        height=ball.get_height(),
-        vel_z=vel[2],
-        speed_x=vel[0],
-        speed_y=vel[1] + (3 if activator == 1 else -3),  # slight drift based on activator
-        radius=ball.radius,
-        spin=ball.spin,
-        chosen_card=None,
-        max_speed=ball.max_speed
-    )
-    shadow.set_bounds(top=bounds[0], bottom=bounds[1], left=bounds[2], right=bounds[3])
-    shadow.is_shadow = True
-    shadow_balls.append(shadow)
+    if activator == 1:
+        shadow1 = Ball(
+            x=pos[0], y=pos[1],
+            height=ball.get_height(),
+            vel_z=vel[2],
+            speed_x=abs(vel[0]) * 1.0,  
+            speed_y=vel[1] + 4,          
+            radius=ball.radius,
+            spin=0.4,
+            chosen_card=None,
+            max_speed=ball.max_speed
+        )
+        shadow2 = Ball(
+            x=pos[0], y=pos[1],
+            height=ball.get_height(),
+            vel_z=vel[2],
+            speed_x=abs(vel[0]) * 0.8,   
+            speed_y=vel[1] - 4,          
+            radius=ball.radius,
+            spin=-0.4,
+            chosen_card=None,
+            max_speed=ball.max_speed
+        )
+    else:
+        shadow1 = Ball(
+            x=pos[0], y=pos[1],
+            height=ball.get_height(),
+            vel_z=vel[2],
+            speed_x=-abs(vel[0]) * 1.0,  
+            speed_y=vel[1] + 4,         
+            radius=ball.radius,
+            spin=0.4,
+            chosen_card=None,
+            max_speed=ball.max_speed
+        )
+        shadow2 = Ball(
+            x=pos[0], y=pos[1],
+            height=ball.get_height(),
+            vel_z=vel[2],
+            speed_x=-abs(vel[0]) * 0.8,  
+            speed_y=vel[1] - 4,          
+            radius=ball.radius,
+            spin=-0.4,
+            chosen_card=None,
+            max_speed=ball.max_speed
+        )
+    
+    shadow1.set_bounds(top=bounds[0], bottom=bounds[1], left=bounds[2], right=bounds[3])
+    shadow1.is_shadow = True
+    shadow_balls.append(shadow1)
+    
+    shadow2.set_bounds(top=bounds[0], bottom=bounds[1], left=bounds[2], right=bounds[3])
+    shadow2.is_shadow = True
+    shadow_balls.append(shadow2)
 
 def low_impact_effect(ball, activator=None, **kwargs):
     print(f"Player {activator} used Low Impact!")
@@ -223,14 +295,27 @@ def rally_effect(ball, activator=None, **kwargs):
 
 def gravitational_pull_effect(ball, paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Gravitational Pull!")
-    ball.grav_pull_active = False
-    ball.grav_pull_activator = activator
-    ball.grav_pull_timer = 2500  
-    ball.grav_pull_strength = 0.95
+    
+    vel = ball.get_velocity()
+    if activator == 1:
+        player2_y = paddle2.hitbox.centery
+        ball_y = ball.get_position()[1]
+        
+        if vel[0] <= 0:
+            ball.set_velocity(abs(vel[0]) * 1.2, vel[1], vel[2])
+            print(f"Ball shot toward Player 2, curving to y={player2_y:.0f}!")
+    else:
+        player1_y = paddle1.hitbox.centery
+        ball_y = ball.get_position()[1]
+        
+ 
+        if vel[0] >= 0:
+            ball.set_velocity(-abs(vel[0]) * 1.2, vel[1], vel[2])
+            print(f"Ball shot toward Player 1, curving to y={player1_y:.0f}!")
+    
     ball.grav_pull_waiting = True
-    ball.grav_pull_triggered = False  
-    print("Next time opponent hits the ball, it will reverse direction!")
-
+    ball.grav_pull_activator = activator
+    print(f"Waiting for opponent to hit the ball...")
 
 def smaller_paddle_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Smaller Paddle on opponent!")
@@ -273,13 +358,13 @@ def smaller_paddle_effect(paddle1, paddle2, activator=None, **kwargs):
         target.position = (new_x, new_y)
         target.set_hitbox_pos(0, 0)
     
-    target.debuff_timer = 3000  # Lasts 3 seconds
+    target.debuff_timer = 5000  # Lasts 5 seconds
 
 def extra_weight_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Extra Weight on opponent!")
     target = paddle2 if activator == 1 else paddle1
     target.speed_multiplier = 0.5
-    target.debuff_timer = 3000
+    target.debuff_timer = 5000
 
 def repulsion_effect(ball, activator=None, **kwargs):
     print(f"Player {activator} used Repulsion!")
@@ -293,7 +378,7 @@ def no_strength_effect(paddle1, paddle2, activator=None, **kwargs):
     target = paddle2 if activator == 1 else paddle1
     target.smash_hold_multiplier = 1.5
     target.smash_power_debuff = 0.05
-    target.debuff_timer = 2000
+    target.debuff_timer = 10000
 
 def disruption_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Disruption on opponent!")
@@ -305,43 +390,60 @@ def delay_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Delay on opponent!")
     target = paddle2 if activator == 1 else paddle1
     target.swing_time_multiplier = 2.0
-    target.debuff_timer = 2000
+    target.debuff_timer = 5000
 
 def weakened_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Weakened on opponent!")
     target = paddle2 if activator == 1 else paddle1
     target.pushback_multiplier = 3.0
-    target.debuff_timer = 3000
+    target.debuff_timer = 5000
 
 def exhaustion_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Exhaustion on opponent!")
     target = paddle2 if activator == 1 else paddle1
     target.hit_strength_multiplier = 0.5
-    target.debuff_timer = 3000
+    target.debuff_timer = 5000
 
 
 chosen_card = None
 
 cards = [
-    Card("Arc Strike", arc_strike_effect, cooldown_rounds=1),
-    Card("Bigger is better", bigger_is_better_effect, cooldown_rounds=1),
-    Card("Bring it back", bring_it_back_effect, cooldown_rounds=1),
-    Card("Shadow Clone", shadow_clone_effect, cooldown_rounds=1),
-    Card("Low impact", low_impact_effect, is_Passive=True),  
-    Card("High impact", high_impact_effect, is_Passive=True),
-    Card("Shrink", shrink_effect, cooldown_rounds=1),
-    Card("Rally", rally_effect, is_Passive=True),
-    Card("Gravitational Pull", gravitational_pull_effect, cooldown_rounds=1),
-    Card("Smaller Paddle", smaller_paddle_effect, cooldown_rounds=1),
-    Card("Extra Weight", extra_weight_effect, cooldown_rounds=1),
-    Card("Repulsion", repulsion_effect, cooldown_rounds=1),
-    Card("No Strength", no_strength_effect, cooldown_rounds=1),
-    Card("Disruption", disruption_effect, cooldown_rounds=1),
-    Card("Delay", delay_effect, cooldown_rounds=1),
-    Card("Weakened", weakened_effect, cooldown_rounds=1),
-    Card("Exhaustion", exhaustion_effect, cooldown_rounds=1),
+    Card("Arc Strike", arc_strike_effect, cooldown_rounds=1,image_path=None),
+    Card("Bigger is better", bigger_is_better_effect, cooldown_rounds=1, image_path=None),
+    Card("Bring it back", bring_it_back_effect, cooldown_rounds=1, image_path=None),
+    Card("Shadow Clone", shadow_clone_effect, cooldown_rounds=1, image_path=None),
+    Card("Low impact", low_impact_effect, is_Passive=True, image_path=None),  
+    Card("High impact", high_impact_effect, is_Passive=True, image_path=None),
+    Card("Shrink", shrink_effect, cooldown_rounds=1,image_path=None),
+    Card("Rally", rally_effect, is_Passive=True, image_path=None),
+    Card("Gravitational Pull", gravitational_pull_effect, cooldown_rounds=1, image_path=None),
+    Card("Smaller Paddle", smaller_paddle_effect, cooldown_rounds=1, image_path=None),
+    Card("Extra Weight", extra_weight_effect, cooldown_rounds=1, image_path=None),
+    Card("Repulsion", repulsion_effect, cooldown_rounds=1, image_path=None),
+    Card("No Strength", no_strength_effect, cooldown_rounds=1, image_path=None),
+    Card("Disruption", disruption_effect, cooldown_rounds=1, image_path=None),
+    Card("Delay", delay_effect, cooldown_rounds=1, image_path=None),
+    Card("Weakened", weakened_effect, cooldown_rounds=1, image_path=None),
+    Card("Exhaustion", exhaustion_effect, cooldown_rounds=1, image_path=None),
 ]
 card_count = 0
+def update_card_images():
+    global cards, card_images
+    image_mapping = {
+        "Arc Strike": "Arc_Strike",
+        "Bigger is better": "Bigger_is_better",
+        "Bring it back": "Bring_it_back",
+        "Shadow Clone": "Shadow_Clone",
+        "Low impact": "Low_Impact",
+        "High impact": "High_Impact",
+    }
+    for card in cards:
+        if card.name in image_mapping:
+            card.image_path = card_images.get(image_mapping[card.name])
+            if card.image_path:
+                print(f"Assigned image to {card.name}")
+            else:
+                print(f"No image found for {card.name}")
 
 class PlayerCardInventory:
     def __init__(self, max_slots=5, player_id=None):
@@ -587,10 +689,10 @@ def draw_random_card(screen, font, player_id, player1_inventory, player2_invento
     else:
         selected_cards = random.sample(available_cards, num)
     
-    card_width = 200
-    card_height = 120
-    spacing = 50
-    transparency = 180
+    card_width = 120
+    card_height = 170
+    spacing = 15
+    transparency = 200
     
     screen_width = screen.get_width()
     screen_height = screen.get_height()
@@ -599,7 +701,6 @@ def draw_random_card(screen, font, player_id, player1_inventory, player2_invento
     y_pos = screen_height // 2 - card_height // 2
     
     card_rects = []
-    
     current_screen = screen.copy()
     
     running = True
@@ -628,11 +729,35 @@ def draw_random_card(screen, font, player_id, player1_inventory, player2_invento
             card_rects.append(rect)
             card_surface = pg.Surface((card_width, card_height), pg.SRCALPHA)
             card_surface.fill((0,0,0,0))
+
             pg.draw.rect(card_surface, (200, 200, 200, transparency), card_surface.get_rect(), border_radius=10)
             pg.draw.rect(card_surface, (0, 0, 0, transparency), card_surface.get_rect(), 3, border_radius=10)
-            text_surface = font.render(card.name, True, (0, 0, 0))
-            text_rect = text_surface.get_rect(center=card_surface.get_rect().center)
+
+            if card.image_path and isinstance(card.image_path, pg.Surface):
+                img_width, img_height = card.image_path.get_size()
+                target_width = card_width - 20
+                target_height = card_height - 40
+                
+                scale = min(target_width / img_width, target_height / img_height)
+                new_width = int(img_width * scale)
+                new_height = int(img_height * scale)
+                
+                x_offset = (target_width - new_width) // 2 + 10
+                y_offset = (target_height - new_height) // 2 + 5
+                
+                scaled_image = pg.transform.scale(card.image_path, (new_width, new_height))
+                card_surface.blit(scaled_image, (x_offset, y_offset))
+            else:
+                small_font = pg.font.SysFont('timesnewroman', 14)
+                text_surface = small_font.render(card.name, True, (0, 0, 0))
+                text_rect = text_surface.get_rect(center=(card_width // 2, card_height // 2))
+                card_surface.blit(text_surface, text_rect)
+
+            small_font = pg.font.SysFont('timesnewroman', 12)
+            text_surface = small_font.render(card.name, True, (50, 50, 50))
+            text_rect = text_surface.get_rect(center=(card_width // 2, card_height - 15))
             card_surface.blit(text_surface, text_rect)
+            
             screen.blit(card_surface, rect)
         
         if is_swap:
@@ -646,7 +771,6 @@ def draw_random_card(screen, font, player_id, player1_inventory, player2_invento
         
         pg.display.flip()
         
-        # Process events inside this loop
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 pg.quit()

@@ -24,6 +24,7 @@ class Ball:
         self.max_speed = max_speed
         self.served = False
         self.max_height = max_height
+        self.last_hitter = None  
 
     def get_velocity(self):
         return self.__velocity

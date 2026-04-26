@@ -21,7 +21,7 @@
         "SmashChargeSpeedMult": 0.5, 
         "SwingBackTime": 200, 
         "SwingForwardTime": 800,
-        "SmashHoldtime": 2500,
+        "SmashHoldtime": 2000,
         "CooldownTime": 500
     }, 
     "Ball Physics": {

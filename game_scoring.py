@@ -20,15 +20,18 @@ class GameScoring:
         if ball_x > self.right_boundary + 20:
             print(f"Ball passed right boundary at x={ball_x} - Player 1 scores!")
             return True, 1
-        if ball_y < self.scoreboard.screen.get_height() * 0.1:  # Top 10% of screen
-            print(f"Ball passed top boundary at y={ball_y} - Player 2 scores!")
-            return True, 2
-    
-    # Check if ball passed bottom boundary (Player 1 scores)
-        if ball_y > self.scoreboard.screen.get_height() * 0.9:  # Bottom 10% of screen
-            print(f"Ball passed bottom boundary at y={ball_y} - Player 1 scores!")
-            return True, 1
+        
+        if hasattr(self.ball, 'last_hitter') and self.ball.last_hitter is not None:
+            if ball_y < self.scoreboard.screen.get_height() * 0.1:  
+                print(f"Ball passed top boundary at y={ball_y} - Player 2 scores!")
+                Scorer = self.ball.last_hitter 
+                return True, Scorer
+            if ball_y > self.scoreboard.screen.get_height() * 0.9: 
+                print(f"Ball passed bottom boundary at y={ball_y} - Player 1 scores!")
+                Scorer = self.ball.last_hitter
+                return True, Scorer
         return False, None
+    
         
     def reset_ball_for_serve(self, ball_config, scorer=None):
         """Reset ball on the loser's side (whoever didn't score)"""
@@ -57,7 +60,10 @@ class GameScoring:
         self.paddle1.hitbox.height = self.paddle1.original_height if hasattr(self.paddle1, 'original_height') else self.paddle1.hitbox.height
         self.paddle2.hitbox.width = self.paddle2.original_width if hasattr(self.paddle2, 'original_width') else self.paddle2.hitbox.width
         self.paddle2.hitbox.height = self.paddle2.original_height if hasattr(self.paddle2, 'original_height') else self.paddle2.hitbox.height
-
+        self.ball.repulsion_active = False
+        self.ball.repulsion_activator = None
+        self.ball.repulsion_timer = 0
+        self.ball.repulsion_has_hit = False
         self.ball.radius = ball_config['Radius']
 
         self.ball.grav_pull_active = False
@@ -72,6 +78,7 @@ class GameScoring:
         self.ball.set_velocity(0, 0, 0)
         self.ball.served = False
         self.ball.spin = 0
+        self.ball.last_hitter = None
 
     def reset_paddle_states(self):
         self.paddle1.smash_charging = False
