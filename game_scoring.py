@@ -45,9 +45,9 @@ class GameScoring:
                 ball_config['init_height']
             )
         self.ball.set_velocity(0, 0, 0)
-        self.ball.spin = 0
         self.ball.served = False
-        
+        self.ball.spin = 0
+
     def reset_paddle_states(self):
         self.paddle1.smash_charging = False
         self.paddle2.smash_charging = False
@@ -57,6 +57,16 @@ class GameScoring:
         self.paddle2.swinging = False
         self.paddle1.has_hit_ball = False
         self.paddle2.has_hit_ball = False
+        self.paddle1.swingTimer = 0
+        self.paddle2.swingTimer = 0
+        self.paddle1.cooldownTimer = 0
+        self.paddle2.cooldownTimer = 0
+        self.paddle1.smashTimer = 0
+        self.paddle2.smashTimer = 0
+        self.paddle1.can_hit_ball = False
+        self.paddle2.can_hit_ball = False
+        self.paddle1.paddleSurface = self.paddle1.sprites[0] 
+        self.paddle2.paddleSurface = self.paddle2.sprites[0]
         
     def reset_for_new_round(self, paddle_config, ball_config, center_y, left_boundary, right_boundary, round_winner=None):
         self.paddle1.position = (left_boundary + 50, center_y - paddle_config['Paddle_Height'] // 2)

@@ -6,7 +6,7 @@ from cards import cards
 from scoreboard import Scoreboard
 from game_scoring import GameScoring
 from cards import cards, PlayerCardInventory, draw_random_card, handle_inventory_selection, show_all_cards
-
+from cardgui import card_ui, card_legend
 pygame.init()
 
 # Load config from JSON file
@@ -593,6 +593,12 @@ while running:
                     paddle1.position = (paddle1.position[0] - 30, paddle1.position[1])
                 if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
                     ball.repulsion_has_hit = True
+                if hasattr(ball, 'grav_pull_active') and ball.grav_pull_active and not ball.grav_pull_triggered:
+                    if ball.grav_pull_activator == 2:
+                        current_vel = ball.get_velocity()
+                        ball.set_velocity(-current_vel[0] * 0.75, current_vel[1] * 0.75, current_vel[2])
+                        ball.grav_pull_triggered = True
+                        ball.grav_pull_active = False
                     
     if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
             if ball.get_velocity()[0] >= 0:
@@ -606,6 +612,12 @@ while running:
                     paddle2.position = (paddle2.position[0] + 30, paddle2.position[1])
                 if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
                     ball.repulsion_has_hit = True
+                if hasattr(ball, 'grav_pull_active') and ball.grav_pull_active and not ball.grav_pull_triggered:
+                    if ball.grav_pull_activator == 1:
+                        current_vel = ball.get_velocity()
+                        ball.set_velocity(-current_vel[0] * 0.75, current_vel[1] * 0.75, current_vel[2])
+                        ball.grav_pull_triggered = True
+                        ball.grav_pull_active = False
                     
     ball.clamp_velocity()
         
@@ -624,6 +636,11 @@ while running:
             shadow_balls.remove(shadow)
    
     scoreboard.draw()
+
+    #Card UI to see cooldown and available cards
+    card_ui(screen, font, player1_inventory, 1, 10, screen.get_height() - 120)
+    card_ui(screen, font, player2_inventory, 2, screen.get_width() - 320, screen.get_height() - 120)
+    card_legend(screen, font)
 
     pygame.display.flip()
 
