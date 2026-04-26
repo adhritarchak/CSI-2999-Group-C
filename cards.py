@@ -216,16 +216,18 @@ def shrink_effect(ball, activator=None, **kwargs):
 def rally_effect(ball, activator=None, **kwargs):
     print(f"Player {activator} used Rally!")
     ball.rally_active = True
-    ball.rally_timer = 10000  # 10 seconds in milliseconds
+    ball.rally_timer = 5000  # 
     ball.rally_activator = activator
     ball.rally_slow_factor = 0.6  # Slow to 60% of speed
     ball.rally_speed_threshold = 7.0  
 
 def gravitational_pull_effect(ball, paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Gravitational Pull!")
-    ball.grav_pull_active = True
+    ball.grav_pull_active = False
     ball.grav_pull_activator = activator
-    ball.grav_pull_timer = 3000  
+    ball.grav_pull_timer = 2500  
+    ball.grav_pull_strength = 0.95
+    ball.grav_pull_waiting = True
     ball.grav_pull_triggered = False  
     print("Next time opponent hits the ball, it will reverse direction!")
 
@@ -303,7 +305,7 @@ def delay_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Delay on opponent!")
     target = paddle2 if activator == 1 else paddle1
     target.swing_time_multiplier = 2.0
-    target.debuff_timer = 3000
+    target.debuff_timer = 2000
 
 def weakened_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Weakened on opponent!")

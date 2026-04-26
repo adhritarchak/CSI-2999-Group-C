@@ -48,6 +48,8 @@ class PongPaddle:
         self.sprites = images
         self.paddleSurface = images[0]
         self.hitbox = pg.Rect(initialPos[0], initialPos[1], width, height)
+        self.original_width = width
+        self.original_height = height
         self.color = rgb_to_hsv(*color)
         # self.fillSurface(color)
         self.font = pg.font.Font(None, 24)

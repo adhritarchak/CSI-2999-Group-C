@@ -10,6 +10,7 @@ class GameScoring:
     def check_score(self):
         # Get the ball's actual X position
         ball_x = self.ball.get_position()[0]
+        ball_y = self.ball.get_position()[1]
         
         # Check if ball passed left boundary (Player 2 scores)
         if ball_x < self.left_boundary - 20:
@@ -18,6 +19,14 @@ class GameScoring:
         # Check if ball passed right boundary (Player 1 scores)
         if ball_x > self.right_boundary + 20:
             print(f"Ball passed right boundary at x={ball_x} - Player 1 scores!")
+            return True, 1
+        if ball_y < self.scoreboard.screen.get_height() * 0.1:  # Top 10% of screen
+            print(f"Ball passed top boundary at y={ball_y} - Player 2 scores!")
+            return True, 2
+    
+    # Check if ball passed bottom boundary (Player 1 scores)
+        if ball_y > self.scoreboard.screen.get_height() * 0.9:  # Bottom 10% of screen
+            print(f"Ball passed bottom boundary at y={ball_y} - Player 1 scores!")
             return True, 1
         return False, None
         
@@ -44,6 +53,22 @@ class GameScoring:
                 self.paddle1.hitbox.centery,
                 ball_config['init_height']
             )
+        self.paddle1.hitbox.width = self.paddle1.original_width if hasattr(self.paddle1, 'original_width') else self.paddle1.hitbox.width
+        self.paddle1.hitbox.height = self.paddle1.original_height if hasattr(self.paddle1, 'original_height') else self.paddle1.hitbox.height
+        self.paddle2.hitbox.width = self.paddle2.original_width if hasattr(self.paddle2, 'original_width') else self.paddle2.hitbox.width
+        self.paddle2.hitbox.height = self.paddle2.original_height if hasattr(self.paddle2, 'original_height') else self.paddle2.hitbox.height
+
+        self.ball.radius = ball_config['Radius']
+
+        self.ball.grav_pull_active = False
+        self.ball.grav_pull_activator = None
+        self.ball.grav_pull_timer = 0
+        self.ball.grav_pull_waiting = False
+        self.ball.grav_pull_triggered = False
+        self.ball.grav_pull_bounced = False
+
+        self.paddle1.set_hitbox_pos(0, 0)
+        self.paddle2.set_hitbox_pos(0, 0)
         self.ball.set_velocity(0, 0, 0)
         self.ball.served = False
         self.ball.spin = 0
