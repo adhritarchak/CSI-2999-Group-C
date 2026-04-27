@@ -513,13 +513,13 @@ while running:
                 paddle_center_y = paddle_rect.centery
                 if ball_y < paddle_center_y:
                     new_vel_y = -abs(ball_vel_y) - 1
-                    ball.spin = -0.2
+                    ball.spin = -0.0001
                 else:
                     new_vel_y = abs(ball_vel_y) + 1
-                    ball.spin = 0.2
+                    ball.spin = 0.0001
                 
                 # Maintain forward momentum but add strong vertical push
-                ball.set_velocity(ball_vel_x * 0.9, new_vel_y, ball_vel_z)
+                ball.set_velocity(ball_vel_x * 0.999, new_vel_y, ball_vel_z * 0.99)
                 print(f"Repulsion moved ball around paddle! Distance: {distance:.0f}")
         else:
             distance = ball_x - paddle_rect.right
@@ -527,12 +527,12 @@ while running:
                 paddle_center_y = paddle_rect.centery
                 if ball_y < paddle_center_y:
                     new_vel_y = -abs(ball_vel_y) - 1
-                    ball.spin = 0.2
+                    ball.spin = 0.0001
                 else:
                     new_vel_y = abs(ball_vel_y) + 1
-                    ball.spin = -0.2
+                    ball.spin = -0.0001
                 
-                ball.set_velocity(ball_vel_x * 0.9, new_vel_y, ball_vel_z)
+                ball.set_velocity(ball_vel_x * 0.999, new_vel_y, ball_vel_z * 0.99)
                 print(f"Repulsion moved ball around paddle! Distance: {distance:.0f}")
         
         if ball.repulsion_has_hit:
@@ -545,7 +545,6 @@ while running:
     
     if hasattr(ball, 'grav_pull_waiting') and ball.grav_pull_waiting:
         ball_x = ball.get_position()[0]
-        print(f"DEBUG: Ball X={ball_x:.1f}, Paddle2 X={paddle2.hitbox.left:.1f}, Distance={paddle2.hitbox.left - ball_x:.1f}")
     if hasattr(ball, 'grav_pull_waiting') and ball.grav_pull_waiting:
         ball.grav_pull_timer -= dt
         if ball.grav_pull_timer <= 0:  
@@ -570,23 +569,42 @@ while running:
     
         
     if ball.within_rect(paddle1.get_hitbox(), (0, 0)) and paddle1.can_hit_ball:
-            if ball.get_velocity()[0] <= 0:
-                ball.last_hitter = 1
-                if hasattr(ball, 'grav_pull_waiting') and ball.grav_pull_waiting:
-                    if ball.grav_pull_activator == 2:  
-                        ball.grav_pull_waiting = False
-                        current_vel = ball.get_velocity()
-                        player2_y = paddle2.hitbox.centery
-                        ball_y = ball.get_position()[1]
-                        if ball_y < player2_y:
-                            ball.spin = 0.1
-                            vertical_push = min(5, (player2_y - ball_y) / 20)
-                        else:
-                            ball.spin = -0.1
-                            vertical_push = -min(5, (ball_y - player2_y) / 20)
-                        ball.set_velocity(abs(current_vel[0]) * 0.8, current_vel[1], current_vel[2])
-                        ball.grav_pull_active = False
-
+        ball.last_hitter = 1
+        if ball.get_velocity()[0] <= 0:   
+            if hasattr(ball, 'grav_pull_waiting') and ball.grav_pull_waiting:
+                if ball.grav_pull_activator == 2:  
+                    ball.grav_pull_waiting = False
+                    current_vel = ball.get_velocity()
+                    ball.set_velocity(abs(current_vel[0]) * 0.75, current_vel[1], current_vel[2])
+                    player2_y = paddle2.hitbox.centery
+                    ball_y = ball.get_position()[1]
+                    if ball_y < player2_y:
+                        ball.spin = 0.01
+                    else:
+                        ball.spin = -0.01
+                    ball.grav_pull_active = False
+                    
+                    ball.impulse((paddle1.velocity[0] * 0.01 * dt / 1000, paddle1.velocity[1] * 0.1 * dt / 1000, 0))
+                    ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
+                    paddle1.has_hit_ball = True
+                    if chosen_card and chosen_card.is_Passive:
+                        chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                    if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
+                        paddle1.position = (paddle1.position[0] - 30, paddle1.position[1])
+                    if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
+                        ball.repulsion_has_hit = True
+                else:
+                    ball.bounce(1, paddle1.swingAngle)
+                    ball.impulse((paddle1.velocity[0] * 0.01 * dt / 1000, paddle1.velocity[1] * 0.1 * dt / 1000, 0))
+                    ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
+                    paddle1.has_hit_ball = True
+                    if chosen_card and chosen_card.is_Passive:
+                        chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                    if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
+                        paddle1.position = (paddle1.position[0] - 30, paddle1.position[1])
+                    if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
+                        ball.repulsion_has_hit = True
+            else:
                 ball.bounce(1, paddle1.swingAngle)
                 ball.impulse((paddle1.velocity[0] * 0.01 * dt / 1000, paddle1.velocity[1] * 0.1 * dt / 1000, 0))
                 ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
@@ -597,37 +615,66 @@ while running:
                     paddle1.position = (paddle1.position[0] - 30, paddle1.position[1])
                 if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
                     ball.repulsion_has_hit = True
+        else:
+            ball.bounce(1, paddle1.swingAngle)
+            ball.impulse((paddle1.velocity[0] * 0.01 * dt / 1000, paddle1.velocity[1] * 0.1 * dt / 1000, 0))
+            ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle1.smashPower))
+            paddle1.has_hit_ball = True
+            if chosen_card and chosen_card.is_Passive:
+                chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+            if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
+                paddle1.position = (paddle1.position[0] - 30, paddle1.position[1])
+            if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
+                ball.repulsion_has_hit = True
                 
                     
     if ball.within_rect(paddle2.get_hitbox(), (0, 0)) and paddle2.can_hit_ball:
+            ball.last_hitter = 2
             if ball.get_velocity()[0] >= 0:
-                ball.last_hitter = 2
+                print("DEBUG")
                 if hasattr(ball, 'grav_pull_waiting') and ball.grav_pull_waiting:
                     if ball.grav_pull_activator == 1:  
                          ball.grav_pull_waiting = False
                          current_vel = ball.get_velocity()
+                         ball.set_velocity(-abs(current_vel[0]) * 0.75, current_vel[1], current_vel[2])
                          player1_y = paddle1.hitbox.centery
                          ball_y = ball.get_position()[1]
                          if ball_y < player1_y:
-                             ball.spin = 0.1
-                             vertical_push = min(5, (player1_y - ball_y) / 20)
+                             ball.spin = 0.01
                          else:
-                             ball.spin = -0.1
-                             vertical_push = -min(5, (ball_y - player1_y) / 20)
-                         ball.set_velocity(-abs(current_vel[0]) * 0.8, current_vel[1], current_vel[2])
-                         ball.grav_pull_active = False
-                         
-                ball.bounce(-1, paddle2.swingAngle)
-                ball.impulse((paddle2.velocity[0] * 0.01 * dt / 1000, paddle2.velocity[1] * 0.1 * dt / 1000, 0))
-                ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
-                paddle2.has_hit_ball = True
-                if chosen_card and chosen_card.is_Passive:
-                    chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
-                if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
-                    paddle2.position = (paddle2.position[0] + 30, paddle2.position[1])
-                if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
-                    ball.repulsion_has_hit = True
-                
+                             ball.spin = -0.01
+                         ball.impulse((paddle2.velocity[0] * 0.01 * dt / 1000, paddle2.velocity[1] * 0.1 * dt / 1000, 0))
+                         ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
+                         paddle2.has_hit_ball = True
+                         if chosen_card and chosen_card.is_Passive:
+                            chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                         if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
+                            paddle2.position = (paddle2.position[0] + 30, paddle2.position[1])
+                         if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
+                            ball.repulsion_has_hit = True
+                else:
+                    ball.bounce(-1, paddle2.swingAngle)
+                    ball.impulse((paddle2.velocity[0] * 0.01 * dt / 1000, paddle2.velocity[1] * 0.1 * dt / 1000, 0))
+                    ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
+                    paddle2.has_hit_ball = True
+                    if chosen_card and chosen_card.is_Passive:
+                        chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                    if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
+                        paddle2.position = (paddle2.position[0] + 30, paddle2.position[1])
+                    if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
+                        ball.repulsion_has_hit = True
+            else:
+                    ball.bounce(-1, paddle2.swingAngle)
+                    ball.impulse((paddle2.velocity[0] * 0.01 * dt / 1000, paddle2.velocity[1] * 0.1 * dt / 1000, 0))
+                    ball.multiplyVelocity(1 + (ballConfig['paddle_hit_boost'] * paddle2.smashPower))
+                    paddle2.has_hit_ball = True
+                    if chosen_card and chosen_card.is_Passive:
+                        chosen_card.activate(ball=ball, paddle1=paddle1, paddle2=paddle2, shadow_balls=shadow_balls)
+                    if abs(ball.get_velocity()[0]) >= ballConfig['Max_Speed'] * 0.7:
+                        paddle2.position = (paddle2.position[0] + 30, paddle2.position[1])
+                    if hasattr(ball, 'repulsion_active') and ball.repulsion_active:
+                        ball.repulsion_has_hit = True
+                        
     ball.clamp_velocity()
         
     ball.update_position()

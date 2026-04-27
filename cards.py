@@ -169,16 +169,16 @@ def arc_strike_effect(ball, activator=None, **kwargs):
         print("Player 1 used Arc Strike!")
         vel = ball.get_velocity()
         if vel[X] > 0:  
-            ball.spin = 0.15  # curve right
+            ball.spin = 0.12  # curve right
         else: 
-            ball.spin = -0.15  # curve left
+            ball.spin = -0.12  # curve left
     elif activator == 2:  # paddle2 activated it
         print("Player 2 used Arc Strike!")
         vel = ball.get_velocity()
         if vel[X] < 0:  
-            ball.spin = -0.15  # curve left
+            ball.spin = -0.12  # curve left
         else:  
-            ball.spin = 0.15  # curve right
+            ball.spin = 0.12  # curve right
 
 def bigger_is_better_effect(paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Bigger is Better!")
@@ -295,26 +295,9 @@ def rally_effect(ball, activator=None, **kwargs):
 
 def gravitational_pull_effect(ball, paddle1, paddle2, activator=None, **kwargs):
     print(f"Player {activator} used Gravitational Pull!")
-    
-    vel = ball.get_velocity()
-    if activator == 1:
-        player2_y = paddle2.hitbox.centery
-        ball_y = ball.get_position()[1]
-        
-        if vel[0] <= 0:
-            ball.set_velocity(abs(vel[0]) * 1.2, vel[1], vel[2])
-            print(f"Ball shot toward Player 2, curving to y={player2_y:.0f}!")
-    else:
-        player1_y = paddle1.hitbox.centery
-        ball_y = ball.get_position()[1]
-        
- 
-        if vel[0] >= 0:
-            ball.set_velocity(-abs(vel[0]) * 1.2, vel[1], vel[2])
-            print(f"Ball shot toward Player 1, curving to y={player1_y:.0f}!")
-    
     ball.grav_pull_waiting = True
     ball.grav_pull_activator = activator
+    ball.grav_pull_timer = 3000  # Lasts 5 seconds or until first bounce
     print(f"Waiting for opponent to hit the ball...")
 
 def smaller_paddle_effect(paddle1, paddle2, activator=None, **kwargs):
